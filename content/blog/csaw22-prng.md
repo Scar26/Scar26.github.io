@@ -1,6 +1,6 @@
 ---
 title: "CSAW22 - Attacking a Linear PRNG with LLL"
-date: 2022-11-16T18:37:48+05:30
+date: 2022-11-15T18:37:48+05:30
 draft: false
 math: true
 ---
