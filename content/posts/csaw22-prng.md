@@ -81,7 +81,7 @@ Where
 **A1** is the vector of $a1_i$
 **A2** is the vector of $a2_i$
 
-so **X** + **A** lies in the lattice
+so **X** + **C** lies in the lattice
 $$L\ =\ \left[\begin{matrix}
 n_1 & 0 & 0 & 0 & 0 \newline
 0 & n_1 & 0 & 0 & 0 \newline
@@ -92,13 +92,13 @@ a1_{2} & a1_{3} & a1_{4} & a1_{5} & a1_{6}\newline
 a2_{2} & a2_{3} & a2_{4} & a2_{5} & a2_{6}
 \end{matrix}\right]$$
 
-Thus, $$X\ =\ CVP(L, A) - A$$
+Thus, $$X\ =\ CVP(L, C) - C$$
 
 GG, we have successfully recovered all $x_i$.
 Here's the sage code I wrote for this
 
 ```python
-def solve_cvp_1(B, t):
+def solve_cvp(B, t):
     t_ = t - B.stack(t).gram_schmidt()[0].row(-1)
     B_ = B.LLL()
     c = B_.solve_left(t_)
