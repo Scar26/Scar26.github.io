@@ -45,7 +45,7 @@ Where $lx_i$ are the lower 307 bits (known) and $ux_i$ are the remaining upper b
 <strong>C</strong> is the vector of $c_i$
 <strong>A1</strong> is the vector of $a1_i$
 <strong>A2</strong> is the vector of $a2_i$</p>
-<p>so <strong>X</strong> + <strong>A</strong> lies in the lattice
+<p>so <strong>X</strong> + <strong>C</strong> lies in the lattice
 $$L\ =\ \left[\begin{matrix}
 n_1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \newline
 0 &amp; n_1 &amp; 0 &amp; 0 &amp; 0 \newline
@@ -55,10 +55,10 @@ n_1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \newline
 a1_{2} &amp; a1_{3} &amp; a1_{4} &amp; a1_{5} &amp; a1_{6}\newline
 a2_{2} &amp; a2_{3} &amp; a2_{4} &amp; a2_{5} &amp; a2_{6}
 \end{matrix}\right]$$</p>
-<p>Thus, $$X\ =\ CVP(L, A) - A$$</p>
+<p>Thus, $$X\ =\ CVP(L, C) - C$$</p>
 <p>GG, we have successfully recovered all $x_i$.
 Here&rsquo;s the sage code I wrote for this</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">solve_cvp_1</span>(B, t):
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">solve_cvp</span>(B, t):
 </span></span><span style="display:flex;"><span>    t_ <span style="color:#f92672">=</span> t <span style="color:#f92672">-</span> B<span style="color:#f92672">.</span>stack(t)<span style="color:#f92672">.</span>gram_schmidt()[<span style="color:#ae81ff">0</span>]<span style="color:#f92672">.</span>row(<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)
 </span></span><span style="display:flex;"><span>    B_ <span style="color:#f92672">=</span> B<span style="color:#f92672">.</span>LLL()
 </span></span><span style="display:flex;"><span>    c <span style="color:#f92672">=</span> B_<span style="color:#f92672">.</span>solve_left(t_)
