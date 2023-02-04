@@ -17,7 +17,7 @@ $R_q = Z_q[X]/(X^N + 1)$ for N some power of 2. The ring of $l_1 \times l_2$ mat
 
 For $x \in Z_q^n$, $||x||_2$ denotes the $l_2$ norm of $x$. For $x \in R_q$,  $||x||_2$ denotes the $l_2$ norm of $x$ considered as a vector of its coefficients
 
-Similarly $||x||_{\infty} = max(\{|x_i|\ | x_i \in x\})$ denotes the $l_{\infty}$ norm of x.
+Similarly $||x||$ = $max(\{|x_i|\ | x_i \in x\})$ denotes the $l_{\infty{}}$ norm of x.
 
 $U(S)$ denotes the uniformly random distribution over the set $S$.
 $\chi(S)$ represents small error distribution over the set S (well, technically it has to be a Poset but that's a given for the rings we're working with)
