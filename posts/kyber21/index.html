@@ -1,0 +1,679 @@
+<!doctype html><html lang=en>
+<head>
+<meta charset=utf-8>
+<meta http-equiv=x-ua-compatible content="ie=edge">
+<meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no">
+<meta name=author content>
+<meta name=description content="This is an author writeup for the cryptography challenge &amp;ldquo;Beyond the mountain&amp;rdquo; that I created for Backdoor CTF 2021-22. It was based on a backdoor that I came up with for a slightly reduced version of kyber. The backdoor allows us to create &amp;ldquo;controlled decryption failures&amp;rdquo; in polynomial time.
+What I personally found interesting in this challenge while creating it was that the attack is based on a technique I personally have yet to see used in any academic work but is very popular in the cryptography CTF community.">
+<meta name=keywords content>
+<meta name=robots content="noodp">
+<meta name=theme-color content>
+<link rel=canonical href=http://scar26.github.io/posts/kyber21/>
+<title>
+Backdooring Kyber: NIST PQ finalist :: Informally Verified — A blog on Security and Cryptography
+</title>
+<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.3/dist/katex.min.css integrity=sha384-Juol1FqnotbkyZUT5Z7gUPjQ9gzlwCENvUZTpQBAPxtusdwFLRy382PSDx5UUJ4/ crossorigin=anonymous>
+<script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.3/dist/katex.min.js integrity=sha384-97gW6UIJxnlKemYavrqDHSX3SiygeOwIZhwyOKRfSaf0JWKRVj9hLASHgFTzT+0O crossorigin=anonymous></script>
+<script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.3/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous onload=renderMathInElement(document.body)></script>
+<script>document.addEventListener("DOMContentLoaded",function(){renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}]})})</script>
+<link href=https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.5.0/css/flag-icon.min.css rel=stylesheet type=text/css>
+<link rel=stylesheet href=/main.24c3d542794dfaa0d05ac4c5a197a9d0491c729bb66345507ae7d672634eb067.css>
+<link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png>
+<link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png>
+<link rel=manifest href=/site.webmanifest>
+<link rel=mask-icon href=/safari-pinned-tab.svg color>
+<link rel="shortcut icon" href=/favicon.ico>
+<meta name=msapplication-TileColor content>
+<meta itemprop=name content="Backdooring Kyber: NIST PQ finalist">
+<meta itemprop=description content="This is an author writeup for the cryptography challenge &ldquo;Beyond the mountain&rdquo; that I created for Backdoor CTF 2021-22. It was based on a backdoor that I came up with for a slightly reduced version of kyber. The backdoor allows us to create &ldquo;controlled decryption failures&rdquo; in polynomial time.
+What I personally found interesting in this challenge while creating it was that the attack is based on a technique I personally have yet to see used in any academic work but is very popular in the cryptography CTF community."><meta itemprop=datePublished content="2022-01-11T18:37:48+05:30">
+<meta itemprop=dateModified content="2022-01-11T18:37:48+05:30">
+<meta itemprop=wordCount content="4045"><meta itemprop=image content="http://scar26.github.io/">
+<meta itemprop=keywords content>
+<meta name=twitter:card content="summary_large_image">
+<meta name=twitter:image content="http://scar26.github.io/">
+<meta name=twitter:title content="Backdooring Kyber: NIST PQ finalist">
+<meta name=twitter:description content="This is an author writeup for the cryptography challenge &ldquo;Beyond the mountain&rdquo; that I created for Backdoor CTF 2021-22. It was based on a backdoor that I came up with for a slightly reduced version of kyber. The backdoor allows us to create &ldquo;controlled decryption failures&rdquo; in polynomial time.
+What I personally found interesting in this challenge while creating it was that the attack is based on a technique I personally have yet to see used in any academic work but is very popular in the cryptography CTF community.">
+<meta property="og:title" content="Backdooring Kyber: NIST PQ finalist">
+<meta property="og:description" content="This is an author writeup for the cryptography challenge &ldquo;Beyond the mountain&rdquo; that I created for Backdoor CTF 2021-22. It was based on a backdoor that I came up with for a slightly reduced version of kyber. The backdoor allows us to create &ldquo;controlled decryption failures&rdquo; in polynomial time.
+What I personally found interesting in this challenge while creating it was that the attack is based on a technique I personally have yet to see used in any academic work but is very popular in the cryptography CTF community.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="http://scar26.github.io/posts/kyber21/"><meta property="og:image" content="http://scar26.github.io/"><meta property="article:section" content="posts">
+<meta property="article:published_time" content="2022-01-11T18:37:48+05:30">
+<meta property="article:modified_time" content="2022-01-11T18:37:48+05:30"><meta property="og:site_name" content="Informally Verified">
+<meta property="article:published_time" content="2022-01-11 18:37:48 +0530 +0530">
+</head>
+<body>
+<div class=container>
+<header class=header>
+<span class=header__inner>
+<a href=/ style=text-decoration:none>
+<div class=logo>
+<span class=logo__mark>></span>
+<span class=logo__text>Informally Verified</span>
+<span class=logo__cursor>
+</span>
+</div>
+</a>
+<span class=header__right>
+<nav class=menu>
+<ul class=menu__inner><li><a href=/posts>Blog</a></li>
+</ul>
+</nav>
+<span class=menu-trigger><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+</span>
+</span>
+</span>
+</header>
+<div class=content>
+<main class=post>
+<div class=post-info>
+<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-clock"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+19 minutes
+</p>
+</div>
+<article>
+<h1 class=post-title>
+<a href=http://scar26.github.io/posts/kyber21/>Backdooring Kyber: NIST PQ finalist</a>
+</h1>
+<div class=post-content>
+<p>This is an author writeup for the cryptography challenge &ldquo;Beyond the mountain&rdquo; that I created for Backdoor CTF 2021-22. It was based on a backdoor that I came up with for a slightly reduced version of <a href=https://ieeexplore.ieee.org/abstract/document/8406610>kyber</a>. The backdoor allows us to create &ldquo;controlled decryption failures&rdquo; in polynomial time.</p>
+<p>What I personally found interesting in this challenge while creating it was that the attack is based on a technique I personally have yet to see used in any academic work but is very popular in the cryptography CTF community. That technique being, RKM&rsquo;s legendary <a href=https://github.com/rkm0959/Inequality_Solving_with_CVP>Inequality solving with CVP</a> repo. Though I did have to extend the logic from RKM&rsquo;s repo to get this attack working, the basic intuition is the same</p>
+<p>I&rsquo;ll begin with an introduction of the Kyber Cryptosystem, followed by the challenge and finally the attack.</p>
+<h2 id=notation>Notation</h2>
+<p>$Z_q$ represents the ring of integers mod q. I&rsquo;ll be using the $[-\frac{q}{2}, \frac{q}{2}]$ representation because it&rsquo;s more intuitive for some encoding stuff easier as you&rsquo;ll see later. This is gonna be kind of important so make sure you understand it well</p>
+<p>$R_q = Z_q[X]/(X^N + 1)$ for N some power of 2. The ring of $l_1 \times l_2$ matrices over $R_q$ is written as $R_q^{l_1 \times l_2}$.</p>
+<p>Elements of $R_q$ are written as polynomials in the indeterminate $u$</p>
+<p>For $x \in Z_q^n$, $||x||_2$ denotes the $l_2$ norm of $x$. For $x \in R_q$, $||x||_2$ denotes the $l_2$ norm of $x$ considered as a vector of its coefficients</p>
+<p>Similarly $x_{\infty} = max({|x_i|\ | x_i \in x})$ denotes the $l_{\infty}$ norm of x.</p>
+<p>$U(S)$ denotes the uniformly random distribution over the set $S$.
+$\chi(S)$ represents a small binomial distribution centered around 0 (well, technically it has to be a Poset but that&rsquo;s a given for the rings we&rsquo;re working with). The exact distribution doesn&rsquo;t really matter for intuition, just think of it as as a small distribution centered around 0</p>
+<h2 id=background>Background</h2>
+<p>CRYSTALS-Kyber is a Module LWE based PKE scheme that, at the time of writing, is one of finalist candidates in the NIST Post Quantum competition.</p>
+<h3 id=mod-lwe>Mod LWE</h3>
+<p>The LWE (Learning with Errors) problem is an extension of the LPN (Learning Parity with Noise) problem and is described as follows.</p>
+<p>For a random secret vector $s \in Z_q^n$, the adversary is given an aribitrary number of samples of the form
+$$(a, a^Ts + e) \in Z_q^n \times Z_q$$ $$a \leftarrow U(Z_q^n), e \leftarrow \chi(Z_q)$$</p>
+<p>The LWE problem is then to obtain $s$ from the given samples. Under the LWE assumption, this problem assumed to be hard.</p>
+<p>For <strong>Ring LWE</strong>, $Z_q$ is replaced with $R_q$. So $a, s, e \in R_q$ and the samples are of the form
+$$(a, a.s + e) \in R_q \times R_q$$</p>
+<p>Finally, for <strong>Module LWE</strong>, $s, a \in R_q^{l \times 1}$, i.e a module of $R_q$ leading to samples of the form
+$$(a, a^Ts + e) \in R_q^{l \times 1} \times R_q$$</p>
+<h2 id=kyber>Kyber</h2>
+<p>As standard for PKEs, Kyber is described by the triplet of functions
+$$KeyGen()\newline
+Enc(pk = (\textbf{t}, \rho), m)\newline
+Dec(sk=\textbf{s}, ct = (u, v))$$</p>
+<h3 id=key-generation>Key Generation</h3>
+<p>$s, e \leftarrow \chi(R_q^{l \times 1})$</p>
+<p>Start by selecting some random bits (256 bits in the kyber spec) $\rho$. And using it as a randomness seed to generate a matrix $A \in R_q^{l \times l} = genA(\rho)$</p>
+<p>$t = A \times s + e$</p>
+<p>Output $s$ as private key and $b$ as public key</p>
+<p>Sage implementation:</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#f92672>//</span> mimic a small centered binomial distribution
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>small_poly</span>():
+    <span style=color:#66d9ef>return</span> Rq([randint(<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>4</span>) <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(N)])
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>genA</span>(base_ring, r, l):
+    random<span style=color:#f92672>.</span>seed(r)
+    A <span style=color:#f92672>=</span> Matrix(
+        base_ring, 
+        [
+            [
+                base_ring([Integer(random<span style=color:#f92672>.</span>randint(<span style=color:#ae81ff>0</span>, q<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>))
+                <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(N)]) <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)
+            ]
+            <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)
+        ]
+    )
+    <span style=color:#66d9ef>return</span> A
+    
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>keygen</span>():
+    <span style=color:#66d9ef>global</span> l
+    r <span style=color:#f92672>=</span> Integer(random<span style=color:#f92672>.</span>getrandbits(N))
+    A <span style=color:#f92672>=</span> genA(Rq, r, l)
+    s <span style=color:#f92672>=</span> vector(Rq, [small_poly() <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)])
+    e <span style=color:#f92672>=</span> vector(Rq, [small_poly() <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)])
+    t <span style=color:#f92672>=</span> A<span style=color:#f92672>*</span>s <span style=color:#f92672>+</span> e
+
+    <span style=color:#66d9ef>return</span> (t, r), (s, e)
+</code></pre></div><h3 id=encryption>Encryption</h3>
+<p>Input: m = plaintext, pk = ($t = genA(\rho)*s + e, \rho$)</p>
+<p><strong>Important</strong>: Bitlength of m &lt;= N</p>
+<p>$$(s', e', e'') \leftarrow \chi(R_q^{l \times 1} \times R_q^{l \times 1} \times R_q)$$</p>
+<p>$$A = genA(\rho)\newline
+u = A^Ts' + e' \in R_q^{l \times 1}\newline
+v = t^Ts' + e'' + \frac{q}{2}m \in R_q$$</p>
+<p>Wait! Wasn&rsquo;t m supposed to be plaintext? Why, yes it was. We first need to encode it to $R_q$.</p>
+<p>To do this, construct a polynomial by using the ith least significant bit of m as the coefficient for $u^i$. Then we multiply this polynomial by $\frac{q}{2}$. So the resulting encoding is a element of $R_q$ with coefficients in only ${0, \frac{q}{2}}$.</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>encode</span>(m):
+        m <span style=color:#f92672>=</span> list(map(int, bin(m)[<span style=color:#ae81ff>2</span>:][::<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]))
+        m <span style=color:#f92672>=</span> Rq(m)
+        <span style=color:#66d9ef>return</span> m<span style=color:#f92672>*</span>q<span style=color:#f92672>//</span><span style=color:#ae81ff>2</span>
+</code></pre></div><p>We then output the Ciphertext $$(u, v)$$</p>
+<p>The complete Encryption Routine looks like this</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>encrypt</span>(pk, m, r, e1):
+    t, rh <span style=color:#f92672>=</span> pk
+    t <span style=color:#f92672>=</span> vector(Rq, t)
+    A <span style=color:#f92672>=</span> genA(Rq, rh, l)
+    m <span style=color:#f92672>=</span> list(map(int, bin(m)[<span style=color:#ae81ff>2</span>:][::<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]))
+    m <span style=color:#f92672>=</span> Rq(m)
+    e2 <span style=color:#f92672>=</span> small_poly()
+    u <span style=color:#f92672>=</span> A<span style=color:#f92672>.</span>transpose()<span style=color:#f92672>*</span>r <span style=color:#f92672>+</span> e1
+    v <span style=color:#f92672>=</span> t<span style=color:#f92672>*</span>r <span style=color:#f92672>+</span> e2 <span style=color:#f92672>+</span> (q<span style=color:#f92672>//</span><span style=color:#ae81ff>2</span>)<span style=color:#f92672>*</span>m
+    <span style=color:#66d9ef>return</span> (u, v)
+</code></pre></div><p>r and e1 are $s'$ and $e'$ that we accept as user input</p>
+<p>Except this is not the complete Kyber encryption routine. In the real Kyber, we have</p>
+<p>$$u = Compress_q(A^Ts' + e')\newline
+v = Compress_q(t^Ts' + e'' + \frac{q}{2}m)$$</p>
+<p>Kyber uses 2 special functions Compress and Decompress. Compress maps $x \in Z_q$ to an integer $y \in {0&mldr;2^d - 1}$ for some $d &lt; \log_2(q)$. Decompress does the opposite (duh), but obviously there&rsquo;s some deterministic error introduced by the compression. i.e For $x \in Z_q$,
+$$r = x - Decompress_q(Compress_q(x))$$</p>
+<p>has a small non-zero distribution. In the challenge, I actually dropped these 2 routines. Reason: though the attack can probably be adjusted (might investigate further at some point) to work with the compression error, it does complicate things and I couldn&rsquo;t figure it out in time.</p>
+<h3 id=decryption>Decryption</h3>
+<p>Input sk = s, ct = (u, v)</p>
+<p>For decryption, we just compute $decode(round(v - s^Tu))$</p>
+<p>Let&rsquo;s open up the equation</p>
+<p>$$
+v - s^Tu\newline
+= t^Ts' + e'' + \frac{q}{2}m - s^T(A^Ts' + e')\newline
+= (As + e)^Ts' + e'' + \frac{q}{2}m - s^T(A^Ts' + e')\newline
+= s^TA^Ts' + e^Ts' + e'' + \frac{q}{2}m - s^TA^Ts' - s^Te'\newline
+= \frac{q}{2}m + (e^Ts' + e'' - s^Te')
+$$</p>
+<p>Let $r = e^Ts' + e'' - s^Te'$</p>
+<p>$r$ consists entirely of $R_q$ elements derived from &ldquo;small&rdquo; distributions. So we can &ldquo;round&rdquo; $c = \frac{q}{2}m + r$ to get m. This is done as follows:</p>
+<p>Let&rsquo;s write c as $c = \sum_{i=0}^{N-1}c_iu^i$. The contribution of $r$ to $c_i$ is small.</p>
+<p>Hence if $c_i \in (-\frac{q}{4}, \frac{q}{4})$ (which can be written as $(0, \frac{q}{4}) \cup (\frac{3q}{4}, q)$), $b_i = 0$. Otherwise $b_i$ = 1.</p>
+<p>Where $b_i$ is the ith bit of m.</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>decode</span>(base_ring, v):
+    v <span style=color:#f92672>=</span> list(v)<span style=color:#f92672>.</span>copy()
+    <span style=color:#66d9ef>for</span> i, p <span style=color:#f92672>in</span> enumerate(v):
+        coefs <span style=color:#f92672>=</span> p<span style=color:#f92672>.</span>list()
+        <span style=color:#66d9ef>for</span> j, a <span style=color:#f92672>in</span> enumerate(coefs):
+            coefs[j] <span style=color:#f92672>=</span> round((<span style=color:#ae81ff>2</span><span style=color:#f92672>/</span>q)<span style=color:#f92672>*</span>Integer(a))<span style=color:#f92672>%</span><span style=color:#ae81ff>2</span>
+        v[i] <span style=color:#f92672>=</span> base_ring(coefs)
+    <span style=color:#66d9ef>return</span> v
+    
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>decrypt</span>(sk, ct):
+    u, v <span style=color:#f92672>=</span> ct
+    m <span style=color:#f92672>=</span> decode(Rq, [v <span style=color:#f92672>-</span> sk<span style=color:#f92672>*</span>u])[<span style=color:#ae81ff>0</span>]
+    m <span style=color:#f92672>=</span> m<span style=color:#f92672>.</span>list()[::<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]
+    <span style=color:#66d9ef>return</span> int(<span style=color:#e6db74>&#39;&#39;</span><span style=color:#f92672>.</span>join(map(str, m)), <span style=color:#ae81ff>2</span>)
+</code></pre></div><h2 id=challenge>Challenge</h2>
+<p>Here&rsquo;s the complete challenge source</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#f92672>import</span> random
+
+q <span style=color:#f92672>=</span> <span style=color:#ae81ff>3329</span>
+R <span style=color:#f92672>=</span> Zmod(q)
+N <span style=color:#f92672>=</span> <span style=color:#ae81ff>32</span>
+l <span style=color:#f92672>=</span> <span style=color:#ae81ff>2</span>
+d <span style=color:#f92672>=</span> <span style=color:#ae81ff>11</span>
+Rx<span style=color:#f92672>.&lt;</span>x<span style=color:#f92672>&gt;</span> <span style=color:#f92672>=</span> PolynomialRing(R)
+Rq<span style=color:#f92672>.&lt;</span>u<span style=color:#f92672>&gt;</span> <span style=color:#f92672>=</span> Rx<span style=color:#f92672>.</span>quotient(x<span style=color:#f92672>^</span>N <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>)
+
+flag <span style=color:#f92672>=</span>  open(<span style=color:#e6db74>&#34;flag.txt&#34;</span>)<span style=color:#f92672>.</span>read()
+
+<span style=color:#75715e># My not so secret keys</span>
+<span style=color:#75715e># Static keys so you can precompute part of the solution to spare our poor VPS some load</span>
+t <span style=color:#f92672>=</span> vector(Rq, [<span style=color:#ae81ff>3299</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3045</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2395</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>742</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2092</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>22</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2323</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>506</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2532</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1565</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>704</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>355</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1766</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1307</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1148</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1194</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2260</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1999</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1188</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>731</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>68</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>847</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2090</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2514</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3252</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>997</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2271</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>731</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1937</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>7</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>2574</span>, <span style=color:#ae81ff>2383</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3121</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>963</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1495</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2776</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2541</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2516</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2667</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2772</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>114</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1762</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>366</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1343</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2521</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1678</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3224</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>510</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1594</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3020</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3145</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1114</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1823</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1081</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1737</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2821</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2202</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2355</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2238</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>745</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>266</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>887</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>2731</span>])
+rh <span style=color:#f92672>=</span> <span style=color:#ae81ff>3428567257</span>
+s <span style=color:#f92672>=</span> vector(Rq, [<span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span>])
+e <span style=color:#f92672>=</span> vector(Rq, [<span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3326</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3328</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3327</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3326</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3327</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3328</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3327</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3327</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3326</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3328</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3328</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span>, <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span>])
+
+pk <span style=color:#f92672>=</span> (t, rh)
+sk <span style=color:#f92672>=</span> (s, e)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>genA</span>(base_ring, r, l):
+    random<span style=color:#f92672>.</span>seed(r)
+    A <span style=color:#f92672>=</span> Matrix(
+        base_ring, 
+        [
+            [
+                base_ring([Integer(random<span style=color:#f92672>.</span>randint(<span style=color:#ae81ff>0</span>, q<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>))
+                <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(N)]) <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)
+            ]
+            <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)
+        ]
+    )
+    <span style=color:#66d9ef>return</span> A
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>decode</span>(base_ring, v):
+    v <span style=color:#f92672>=</span> list(v)<span style=color:#f92672>.</span>copy()
+    <span style=color:#66d9ef>for</span> i, p <span style=color:#f92672>in</span> enumerate(v):
+        coefs <span style=color:#f92672>=</span> p<span style=color:#f92672>.</span>list()
+        <span style=color:#66d9ef>for</span> j, a <span style=color:#f92672>in</span> enumerate(coefs):
+            coefs[j] <span style=color:#f92672>=</span> round((<span style=color:#ae81ff>2</span><span style=color:#f92672>/</span>q)<span style=color:#f92672>*</span>Integer(a))<span style=color:#f92672>%</span><span style=color:#ae81ff>2</span>
+        v[i] <span style=color:#f92672>=</span> base_ring(coefs)
+    <span style=color:#66d9ef>return</span> v
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>small_secret</span>():
+    <span style=color:#66d9ef>return</span> Rq([randint(<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>4</span>) <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(N)])
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>small_error</span>():
+    <span style=color:#66d9ef>return</span> Rq([randint(<span style=color:#f92672>-</span><span style=color:#ae81ff>4</span>, <span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(N)])
+
+<span style=color:#75715e># In case you plebs think testing it locally will make it any easier</span>
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>keygen</span>():
+    <span style=color:#66d9ef>global</span> l
+    r <span style=color:#f92672>=</span> Integer(random<span style=color:#f92672>.</span>getrandbits(N))
+    A <span style=color:#f92672>=</span> genA(Rq, r, l)
+    s <span style=color:#f92672>=</span> vector(Rq, [small_secret() <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)])
+    e <span style=color:#f92672>=</span> vector(Rq, [small_error() <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)])
+    t <span style=color:#f92672>=</span> A<span style=color:#f92672>*</span>s <span style=color:#f92672>+</span> e
+
+    <span style=color:#66d9ef>return</span> (t, r), (s, e)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>encrypt</span>(pk, m, r, e1):
+    t, rh <span style=color:#f92672>=</span> pk
+    t <span style=color:#f92672>=</span> vector(Rq, t)
+    A <span style=color:#f92672>=</span> genA(Rq, rh, l)
+    m <span style=color:#f92672>=</span> list(map(int, bin(m)[<span style=color:#ae81ff>2</span>:][::<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]))
+    m <span style=color:#f92672>=</span> Rq(m)
+    e2 <span style=color:#f92672>=</span> small_error()
+    u <span style=color:#f92672>=</span> A<span style=color:#f92672>.</span>transpose()<span style=color:#f92672>*</span>r <span style=color:#f92672>+</span> e1
+    v <span style=color:#f92672>=</span> t<span style=color:#f92672>*</span>r <span style=color:#f92672>+</span> e2 <span style=color:#f92672>+</span> (q<span style=color:#f92672>//</span><span style=color:#ae81ff>2</span>)<span style=color:#f92672>*</span>m
+    <span style=color:#66d9ef>return</span> (u, v)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>decrypt</span>(sk, ct):
+    u, v <span style=color:#f92672>=</span> ct
+    m <span style=color:#f92672>=</span> decode(Rq, [v <span style=color:#f92672>-</span> sk<span style=color:#f92672>*</span>u])[<span style=color:#ae81ff>0</span>]
+    m <span style=color:#f92672>=</span> m<span style=color:#f92672>.</span>list()[::<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]
+    <span style=color:#66d9ef>return</span> int(<span style=color:#e6db74>&#39;&#39;</span><span style=color:#f92672>.</span>join(map(str, m)), <span style=color:#ae81ff>2</span>)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>verify_small_vector</span>(v):
+    <span style=color:#66d9ef>return</span> all([<span style=color:#f92672>-</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>&lt;=</span> i <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>6</span> <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> v[:<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]])
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>flatten</span>(u):
+    b <span style=color:#f92672>=</span> []
+    <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> u:
+        j <span style=color:#f92672>=</span> i<span style=color:#f92672>.</span>list()
+        j <span style=color:#f92672>=</span> j <span style=color:#f92672>+</span> [<span style=color:#ae81ff>0</span>]<span style=color:#f92672>*</span>(N<span style=color:#f92672>-</span>len(j))
+        b <span style=color:#f92672>+=</span> j
+    <span style=color:#66d9ef>return</span> vector(R, b)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>unflatten</span>(base_ring, v):
+    v <span style=color:#f92672>=</span> list(v)
+    <span style=color:#66d9ef>return</span> vector(
+        base_ring,
+        [base_ring(v[i<span style=color:#f92672>*</span>N: (i<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>)<span style=color:#f92672>*</span>N]) <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> range(len(v)<span style=color:#f92672>//</span>N)]
+    )
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>receive_vector</span>():
+    <span style=color:#e6db74>&#34;&#34;&#34;
+</span><span style=color:#e6db74>    What you want to input here is a vector of dimension l over Rq.
+</span><span style=color:#e6db74>    The way to do that is to create your vector, call the function &#34;flatten&#34; on it,
+</span><span style=color:#e6db74>    and then send the resulting list as comma separated integers
+</span><span style=color:#e6db74>    e.g: if your vector is v, you need to send str(flatten(v)).replace(&#34;[&#34;, &#34;&#34;).replace(&#34;]&#34;, &#34;&#34;)
+</span><span style=color:#e6db74>    &#34;&#34;&#34;</span>
+    a <span style=color:#f92672>=</span> input(<span style=color:#e6db74>&#34;Enter vector: &#34;</span>)
+    a <span style=color:#f92672>=</span> list(map(Integer, a<span style=color:#f92672>.</span>split(<span style=color:#e6db74>&#34;,&#34;</span>)))
+    
+    <span style=color:#66d9ef>if</span> len(a) <span style=color:#f92672>!=</span> N<span style=color:#f92672>*</span>l:
+        print (<span style=color:#e6db74>&#34;It&#39;s just a simple math challenge, no pwn trickery please&#34;</span>)
+        exit()
+
+    <span style=color:#66d9ef>if</span> <span style=color:#f92672>not</span> verify_small_vector(a):
+        print (<span style=color:#e6db74>&#34;Is an error even an error if it&#39;s not small&#34;</span>)
+        exit()
+    
+    <span style=color:#66d9ef>return</span> unflatten(Rq, a)
+
+<span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>5</span>):
+    pt <span style=color:#f92672>=</span> randint(<span style=color:#ae81ff>0</span>, <span style=color:#ae81ff>2</span><span style=color:#f92672>^</span><span style=color:#ae81ff>11</span>)
+    print (<span style=color:#e6db74>&#34;plaintext: &#34;</span>, pt)
+    challenge <span style=color:#f92672>=</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>^</span>randint(<span style=color:#ae81ff>0</span>, <span style=color:#ae81ff>11</span>)
+    print (<span style=color:#e6db74>&#34;challenge: &#34;</span>, challenge)
+    r <span style=color:#f92672>=</span> receive_vector()
+    e1 <span style=color:#f92672>=</span> receive_vector()
+    dif <span style=color:#f92672>=</span> decrypt(sk[<span style=color:#ae81ff>0</span>], encrypt(pk, pt, r, e1))<span style=color:#f92672>^^</span>pt
+    <span style=color:#66d9ef>if</span> dif <span style=color:#f92672>!=</span> challenge:
+        print (<span style=color:#e6db74>&#34;So much for perfect correctness&#34;</span>)
+        exit()
+
+print (<span style=color:#e6db74>&#34;OK, you win. Here&#39;s your flag&#34;</span>)
+print (flag)
+</code></pre></div><p>There&rsquo;s encryption and decryption implemented. It&rsquo;s mostly standard kyber. It&rsquo;s only &ldquo;reduced&rdquo; in the following 2 ways. Both the secret and public key are known (they&rsquo;re static but they&rsquo;re randomly generated. That was genuinely just to save our poor server some load)</p>
+<p>The player is given a plaintext and a bit index from 0-11. The player is allowed to povide the randomness $s', e'$ for the encryption function, such that only the bit at the provided index is flipped when it&rsquo;s decrypted. Hence &ldquo;controlled decryption failure&rdquo; since we&rsquo;re required to control which bits are flipped by the failure.</p>
+<p>Repeat 5 times
+???
+Flag!</p>
+<h2 id=decryption-failure>Decryption Failure</h2>
+<p>It&rsquo;s clear from the decryption function that Kyber does not have <strong>perfect correctness</strong>. Which is really an issue with most LWE based encryption schemes. Meaning that in rare cases, we may encounter a &ldquo;decryption failure&rdquo;. A decryption failure is the event where
+$$m \neq Decrypt_{sk}(Encrypt_{pk}(m))$$</p>
+<p>To model a failure, we&rsquo;ll borrow some notation from the &ldquo;<a href=https://eprint.iacr.org/2019/1399.pdf>failure boosting</a>&rdquo; line of research on Kyber (which I will not be going into here, just stealing their tools).</p>
+<p>The final error as derived in the decryption section was $r = e^Ts' + e'' - s^Te'$</p>
+<p>Let $S = \left[\begin{matrix}
+-s \newline
+e
+\end{matrix}\right]$ $C = \left[\begin{matrix}
+e' \newline
+s'
+\end{matrix}\right]$ $G = e''$
+Then,
+$$r = S^TC + G$$
+And a failure occurs when $r_{\infty} > \frac{q}{4}$ i.e
+$$\frac{q}{4} \leq r_{\infty} \leq \frac{3q}{4}$$
+Since G is small,
+$$\frac{q}{4} \leq (S^TC)_{\infty} \leq \frac{3q}{4}$$
+Note that S is made of elements in the secret key (known), C is made of encryption randomness (which the attacker controls). So for the challenge given S, we need to find C such that coefficient of $u^i$ in $S^TC$ is in $(\frac{q}{4}, \frac{3q}{4})$</p>
+<p>The following transformation (also stolen from <a href=https://eprint.iacr.org/2019/1399.pdf>here</a>) can be used to calculate these coefficients individually</p>
+<p>For $X \in R_q^{l \times 1}$, $\bar{X} \in Z_q^{lN \times 1}$ is the representation of $X$ where each polynomial in $R_q$ is decomposed into a list of its coefficients in $Z_q$.</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>bar</span>(base_ring, u, v):
+    b <span style=color:#f92672>=</span> []
+    <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> u:
+        j <span style=color:#f92672>=</span> i<span style=color:#f92672>.</span>list()
+        j <span style=color:#f92672>=</span> j <span style=color:#f92672>+</span> [<span style=color:#ae81ff>0</span>]<span style=color:#f92672>*</span>(N<span style=color:#f92672>-</span>len(j))
+        b <span style=color:#f92672>+=</span> j
+    <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> v:
+        j <span style=color:#f92672>=</span> i<span style=color:#f92672>.</span>list()
+        j <span style=color:#f92672>=</span> j <span style=color:#f92672>+</span> [<span style=color:#ae81ff>0</span>]<span style=color:#f92672>*</span>(N<span style=color:#f92672>-</span>len(j))
+        b <span style=color:#f92672>+=</span> j
+    <span style=color:#66d9ef>return</span> vector(base_ring, b)
+</code></pre></div><p>It&rsquo;s also easily reversible</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>unbar</span>(base_ring, v):
+    v <span style=color:#f92672>=</span> list(v)
+    <span style=color:#66d9ef>return</span> vector(
+    base_ring, 
+    [base_ring(v[i<span style=color:#f92672>*</span>N: (i<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>)<span style=color:#f92672>*</span>N]) <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> range(len(v)<span style=color:#f92672>//</span>N)]
+    )
+</code></pre></div><p>For $C \in R_q^{l \times 1}$,
+$$C^{(r)} = X^rC(X^{-1})\mod X^N + 1$$</p>
+<p>$C^{(r)}$ is called the rotation of $C$ by r</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>evalinv</span>(c):
+    c <span style=color:#f92672>=</span> list(c)<span style=color:#f92672>.</span>copy()
+    <span style=color:#66d9ef>for</span> i, p <span style=color:#f92672>in</span> enumerate(c):
+        c[i] <span style=color:#f92672>=</span> sum([x<span style=color:#f92672>*</span>(u<span style=color:#f92672>^-</span>j) <span style=color:#66d9ef>for</span> j,x <span style=color:#f92672>in</span> enumerate(p<span style=color:#f92672>.</span>list())])
+    <span style=color:#66d9ef>return</span> vector(Rq, c)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>rotation</span>(c, r):
+    <span style=color:#66d9ef>return</span> (u<span style=color:#f92672>^</span>r)<span style=color:#f92672>*</span>evalinv(c)
+</code></pre></div><p>Note that to reverse a rotation, we just need to rotate by the same r again</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python>c <span style=color:#f92672>=</span> vector(Rq, [Rq<span style=color:#f92672>.</span>random_element() <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)])
+<span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>100</span>):
+    <span style=color:#66d9ef>assert</span>(c <span style=color:#f92672>==</span> rotation(rotation(c, j), j))
+</code></pre></div><p>It is easy to verify that</p>
+<p>$$S^TC = \sum_{i=0}^{N-1}\bar{S}^T\bar{C^{(i)}}.u^i$$</p>
+<p>Now we can rewrite our problem statement as: Given $S$, to cause a decryption failure that flips the ith bit, we need to find a $C$ that satisfies $\bar{S}^T\bar{C^{(i)}} \in (\frac{q}{4}, \frac{3q}{4})$</p>
+<h2 id=attack>Attack</h2>
+<p>Since C is completely made of small terms (and as a result so is any rotation of C), corrupting a bit boils down to computing small solutions for a linear inequality in $Z_q$. (What you get after the inequality is a rotation of C, to corrupt a specific bit i, just reverse rotate it by i to obtain C). This is starting to smell eerily like a lattice problem.</p>
+<p>we need to find a small $c_i$, such that
+$$\frac{q}{4} \leq \sum{}s_ic_i \leq \frac{q}{4}$$</p>
+<p>In other words we need to find small $c_i$ for atleast one target $t$, $\frac{q}{4} \leq t \leq \frac{q}{4}$ such that
+$$\sum{}s_ic_i = t$$</p>
+<p>For a given $t$, can be solved with CVP by using the following lattice basis and target vector
+$$L\ =\ \left[\begin{matrix}
+1 & 0 & .. & .. & s_0 \newline
+0 & 1 & .. & .. & s_1 \newline
+0 & 0 & 1 & .. & s_2 \newline
+.. & .. & .. & .. & .. \newline
+.. & .. & .. & .. & .. \newline
+0 & 0 & 0 & 0 & q
+\end{matrix}\right]$$</p>
+<p>$$T = \left[0\ 0\ &mldr;. t\ \right]^T$$</p>
+<p>We get a valid solution for C if $\frac{q}{4}
+\leq CVP(L, T)[-1] \leq \frac{3q}{4}$ and all other elements (which give us C) are &ldquo;small&rdquo; enough to be accepted. We can&rsquo;t use the inequality repo directly, because you won&rsquo;t always find a small enough solution at a target of q/2 which is essentially what it tries to do minus lots of weighting stuff which we don&rsquo;t need. So to find this target, we start from q/2 and go outward from there.</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>attack</span>(s, t):
+    mat <span style=color:#f92672>=</span> [[<span style=color:#ae81ff>0</span>]<span style=color:#f92672>*</span><span style=color:#ae81ff>129</span> <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>129</span>)]
+    <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>128</span>):
+        mat[i][i] <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>
+        mat[i][<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>] <span style=color:#f92672>=</span> Integer(int(s[i]))
+    mat[<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>][<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>] <span style=color:#f92672>=</span> <span style=color:#f92672>-</span>q
+    mat <span style=color:#f92672>=</span> Matrix(ZZ, mat)
+    v <span style=color:#f92672>=</span> vector(ZZ, [<span style=color:#ae81ff>0</span>]<span style=color:#f92672>*</span><span style=color:#ae81ff>128</span> <span style=color:#f92672>+</span> [t])
+    sol <span style=color:#f92672>=</span> solve_cvp(mat, v)
+    <span style=color:#66d9ef>return</span> sol
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>check_small</span>(v):
+    <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> v[:<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]:
+        <span style=color:#66d9ef>if</span> i <span style=color:#f92672>&lt;</span> <span style=color:#f92672>-</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>or</span> i <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>6</span>:
+            <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>False</span>
+    <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>True</span>
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>generate_backdoor</span>(sk): 
+    s, e <span style=color:#f92672>=</span> sk
+    sbar <span style=color:#f92672>=</span> bar(R, <span style=color:#f92672>-</span>s, e)
+    t <span style=color:#f92672>=</span> q<span style=color:#f92672>//</span><span style=color:#ae81ff>2</span>
+    <span style=color:#66d9ef>for</span> offset <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>20</span>):
+        <span style=color:#66d9ef>for</span> dir <span style=color:#f92672>in</span> (<span style=color:#ae81ff>1</span>, <span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>):
+            v <span style=color:#f92672>=</span> attack(sbar, t <span style=color:#f92672>+</span> dir<span style=color:#f92672>*</span>offset)
+            <span style=color:#66d9ef>if</span> check_small(v):
+                <span style=color:#66d9ef>return</span> v
+    print (<span style=color:#e6db74>&#34;attack failed&#34;</span>)
+    exit()
+
+C <span style=color:#f92672>=</span> unbar(Rq, generate_backdoor(sk))
+</code></pre></div><p>There&rsquo;s roughly 1500 targets for the CVP between q/4 and 3q/4 but you only need to try about 100 values around q/2 to obtain solutions that fit within range. For the smaller parameters I used for the challenge, you get a hit in less than 5 tries (Much like rkm&rsquo;s repo, I didn&rsquo;t write a mathematical proof for why this works, but it makes intuitive sense if you think about it). Once you find said small solution, you just need to send reverse rotations of it for corrupting any bit you want and get the flag</p>
+<p>Flag! <code>flag{1f_y0u_lW3_1t_th3n_y0u_b3tt3r_put_4_R1n6_0n_i7}</code></p>
+<p>Yes, I&rsquo;m very proud of that pun</p>
+<h2 id=complete-exploit>Complete Exploit</h2>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=color:#f92672>import</span> random
+
+q <span style=color:#f92672>=</span> <span style=color:#ae81ff>3329</span>
+R <span style=color:#f92672>=</span> Zmod(q)
+N <span style=color:#f92672>=</span> <span style=color:#ae81ff>32</span>
+l <span style=color:#f92672>=</span> <span style=color:#ae81ff>2</span>
+d <span style=color:#f92672>=</span> <span style=color:#ae81ff>11</span>
+Rx<span style=color:#f92672>.&lt;</span>x<span style=color:#f92672>&gt;</span> <span style=color:#f92672>=</span> PolynomialRing(R)
+Rq<span style=color:#f92672>.&lt;</span>u<span style=color:#f92672>&gt;</span> <span style=color:#f92672>=</span> Rx<span style=color:#f92672>.</span>quotient(x<span style=color:#f92672>^</span>N <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>)
+
+flag <span style=color:#f92672>=</span>  open(<span style=color:#e6db74>&#34;flag.txt&#34;</span>)<span style=color:#f92672>.</span>read()
+
+<span style=color:#75715e># My not so secret keys</span>
+<span style=color:#75715e># Static keys so you can precompute part of the solution to spare our poor VPS some load</span>
+t <span style=color:#f92672>=</span> vector(Rq, [<span style=color:#ae81ff>3299</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3045</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2395</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>742</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2092</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>22</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2323</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>506</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2532</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1565</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>704</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>355</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1766</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1307</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1148</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1194</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2260</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1999</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1188</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>731</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>68</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>847</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2090</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2514</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3252</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>997</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2271</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>731</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1937</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>7</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>2574</span>, <span style=color:#ae81ff>2383</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3121</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>963</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1495</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2776</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2541</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2516</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2667</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2772</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>114</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1762</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>366</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1343</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2521</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1678</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3224</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>510</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1594</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3020</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3145</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1114</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1823</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1081</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>1737</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2821</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2202</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2355</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2238</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>745</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>266</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>887</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>2731</span>])
+rh <span style=color:#f92672>=</span> <span style=color:#ae81ff>3428567257</span>
+s <span style=color:#f92672>=</span> vector(Rq, [<span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span>, <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span>])
+e <span style=color:#f92672>=</span> vector(Rq, [<span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3326</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3328</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3327</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3326</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3327</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3328</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3327</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3327</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3326</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3328</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3328</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span>, <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>31</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>30</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>29</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>28</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>27</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>26</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>25</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>24</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>23</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>22</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>21</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>20</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>19</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>18</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>17</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>16</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>15</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>14</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>13</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>12</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>11</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>10</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>9</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>8</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>7</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>5</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>4</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>3</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>3324</span><span style=color:#f92672>*</span>u<span style=color:#f92672>^</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> <span style=color:#ae81ff>5</span><span style=color:#f92672>*</span>u <span style=color:#f92672>+</span> <span style=color:#ae81ff>3325</span>])
+
+pk <span style=color:#f92672>=</span> (t, rh)
+sk <span style=color:#f92672>=</span> (s, e)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>genA</span>(base_ring, r, l):
+    random<span style=color:#f92672>.</span>seed(r)
+    A <span style=color:#f92672>=</span> Matrix(
+        base_ring, 
+        [
+            [
+                base_ring([Integer(random<span style=color:#f92672>.</span>randint(<span style=color:#ae81ff>0</span>, q<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>))
+                <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(N)]) <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)
+            ]
+            <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)
+        ]
+    )
+    <span style=color:#66d9ef>return</span> A
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>decode</span>(base_ring, v):
+    v <span style=color:#f92672>=</span> list(v)<span style=color:#f92672>.</span>copy()
+    <span style=color:#66d9ef>for</span> i, p <span style=color:#f92672>in</span> enumerate(v):
+        coefs <span style=color:#f92672>=</span> p<span style=color:#f92672>.</span>list()
+        <span style=color:#66d9ef>for</span> j, a <span style=color:#f92672>in</span> enumerate(coefs):
+            coefs[j] <span style=color:#f92672>=</span> round((<span style=color:#ae81ff>2</span><span style=color:#f92672>/</span>q)<span style=color:#f92672>*</span>Integer(a))<span style=color:#f92672>%</span><span style=color:#ae81ff>2</span>
+        v[i] <span style=color:#f92672>=</span> base_ring(coefs)
+    <span style=color:#66d9ef>return</span> v
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>small_secret</span>():
+    <span style=color:#66d9ef>return</span> Rq([randint(<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>4</span>) <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(N)])
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>small_error</span>():
+    <span style=color:#66d9ef>return</span> Rq([randint(<span style=color:#f92672>-</span><span style=color:#ae81ff>4</span>, <span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(N)])
+
+<span style=color:#75715e># In case you plebs think testing it locally will make it any easier</span>
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>keygen</span>():
+    <span style=color:#66d9ef>global</span> l
+    r <span style=color:#f92672>=</span> Integer(random<span style=color:#f92672>.</span>getrandbits(N))
+    A <span style=color:#f92672>=</span> genA(Rq, r, l)
+    s <span style=color:#f92672>=</span> vector(Rq, [small_secret() <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)])
+    e <span style=color:#f92672>=</span> vector(Rq, [small_error() <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(l)])
+    t <span style=color:#f92672>=</span> A<span style=color:#f92672>*</span>s <span style=color:#f92672>+</span> e
+
+    <span style=color:#66d9ef>return</span> (t, r), (s, e)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>encrypt</span>(pk, m, r, e1):
+    t, rh <span style=color:#f92672>=</span> pk
+    t <span style=color:#f92672>=</span> vector(Rq, t)
+    A <span style=color:#f92672>=</span> genA(Rq, rh, l)
+    m <span style=color:#f92672>=</span> list(map(int, bin(m)[<span style=color:#ae81ff>2</span>:][::<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]))
+    m <span style=color:#f92672>=</span> Rq(m)
+    e2 <span style=color:#f92672>=</span> small_error()
+    u <span style=color:#f92672>=</span> A<span style=color:#f92672>.</span>transpose()<span style=color:#f92672>*</span>r <span style=color:#f92672>+</span> e1
+    v <span style=color:#f92672>=</span> t<span style=color:#f92672>*</span>r <span style=color:#f92672>+</span> e2 <span style=color:#f92672>+</span> (q<span style=color:#f92672>//</span><span style=color:#ae81ff>2</span>)<span style=color:#f92672>*</span>m
+    <span style=color:#66d9ef>return</span> (u, v)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>decrypt</span>(sk, ct):
+    u, v <span style=color:#f92672>=</span> ct
+    m <span style=color:#f92672>=</span> decode(Rq, [v <span style=color:#f92672>-</span> sk<span style=color:#f92672>*</span>u])[<span style=color:#ae81ff>0</span>]
+    m <span style=color:#f92672>=</span> m<span style=color:#f92672>.</span>list()[::<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]
+    <span style=color:#66d9ef>return</span> int(<span style=color:#e6db74>&#39;&#39;</span><span style=color:#f92672>.</span>join(map(str, m)), <span style=color:#ae81ff>2</span>)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>verify_small_vector</span>(v):
+    <span style=color:#66d9ef>return</span> all([<span style=color:#f92672>-</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>&lt;=</span> i <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>6</span> <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> v[:<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]])
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>flatten</span>(u):
+    b <span style=color:#f92672>=</span> []
+    <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> u:
+        j <span style=color:#f92672>=</span> i<span style=color:#f92672>.</span>list()
+        j <span style=color:#f92672>=</span> j <span style=color:#f92672>+</span> [<span style=color:#ae81ff>0</span>]<span style=color:#f92672>*</span>(N<span style=color:#f92672>-</span>len(j))
+        b <span style=color:#f92672>+=</span> j
+    <span style=color:#66d9ef>return</span> vector(R, b)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>unflatten</span>(base_ring, v):
+    v <span style=color:#f92672>=</span> list(v)
+    <span style=color:#66d9ef>return</span> vector(
+        base_ring,
+        [base_ring(v[i<span style=color:#f92672>*</span>N: (i<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>)<span style=color:#f92672>*</span>N]) <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> range(len(v)<span style=color:#f92672>//</span>N)]
+    )
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>receive_vector</span>():
+    <span style=color:#e6db74>&#34;&#34;&#34;
+</span><span style=color:#e6db74>    What you want to input here is a vector of dimension l over Rq.
+</span><span style=color:#e6db74>    The way to do that is to create your vector, call the function &#34;flatten&#34; on it,
+</span><span style=color:#e6db74>    and then send the resulting list as comma separated integers
+</span><span style=color:#e6db74>    e.g: if your vector is v, you need to send str(flatten(v)).replace(&#34;[&#34;, &#34;&#34;).replace(&#34;]&#34;, &#34;&#34;)
+</span><span style=color:#e6db74>    &#34;&#34;&#34;</span>
+    a <span style=color:#f92672>=</span> input(<span style=color:#e6db74>&#34;Enter vector: &#34;</span>)
+    a <span style=color:#f92672>=</span> list(map(Integer, a<span style=color:#f92672>.</span>split(<span style=color:#e6db74>&#34;,&#34;</span>)))
+    
+    <span style=color:#66d9ef>if</span> len(a) <span style=color:#f92672>!=</span> N<span style=color:#f92672>*</span>l:
+        print (<span style=color:#e6db74>&#34;It&#39;s just a simple math challenge, no pwn trickery please&#34;</span>)
+        exit()
+
+    <span style=color:#66d9ef>if</span> <span style=color:#f92672>not</span> verify_small_vector(a):
+        print (<span style=color:#e6db74>&#34;Is an error even an error if it&#39;s not small&#34;</span>)
+        exit()
+    
+    <span style=color:#66d9ef>return</span> unflatten(Rq, a)
+
+<span style=color:#75715e># Solution/Testing</span>
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>bar</span>(base_ring, u, v):
+    b <span style=color:#f92672>=</span> []
+    <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> u:
+        j <span style=color:#f92672>=</span> i<span style=color:#f92672>.</span>list()
+        j <span style=color:#f92672>=</span> j <span style=color:#f92672>+</span> [<span style=color:#ae81ff>0</span>]<span style=color:#f92672>*</span>(N<span style=color:#f92672>-</span>len(j))
+        b <span style=color:#f92672>+=</span> j
+    <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> v:
+        j <span style=color:#f92672>=</span> i<span style=color:#f92672>.</span>list()
+        j <span style=color:#f92672>=</span> j <span style=color:#f92672>+</span> [<span style=color:#ae81ff>0</span>]<span style=color:#f92672>*</span>(N<span style=color:#f92672>-</span>len(j))
+        b <span style=color:#f92672>+=</span> j
+    <span style=color:#66d9ef>return</span> vector(base_ring, b)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>unbar</span>(base_ring, v):
+    v <span style=color:#f92672>=</span> list(v)
+    <span style=color:#66d9ef>return</span> vector(
+    base_ring, 
+    [base_ring(v[i<span style=color:#f92672>*</span>N: (i<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>)<span style=color:#f92672>*</span>N]) <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> range(len(v)<span style=color:#f92672>//</span>N)]
+    )
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>evalinv</span>(c):
+    c <span style=color:#f92672>=</span> list(c)<span style=color:#f92672>.</span>copy()
+    <span style=color:#66d9ef>for</span> i, p <span style=color:#f92672>in</span> enumerate(c):
+        c[i] <span style=color:#f92672>=</span> sum([x<span style=color:#f92672>*</span>(u<span style=color:#f92672>^-</span>j) <span style=color:#66d9ef>for</span> j,x <span style=color:#f92672>in</span> enumerate(p<span style=color:#f92672>.</span>list())])
+    <span style=color:#66d9ef>return</span> vector(Rq, c)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>rotation</span>(c, r):
+    <span style=color:#66d9ef>return</span> (u<span style=color:#f92672>^</span>r)<span style=color:#f92672>*</span>evalinv(c)
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>solve_cvp</span>(B, t):
+    t_ <span style=color:#f92672>=</span> t <span style=color:#f92672>-</span> B<span style=color:#f92672>.</span>stack(t)<span style=color:#f92672>.</span>gram_schmidt()[<span style=color:#ae81ff>0</span>]<span style=color:#f92672>.</span>row(<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>)
+    B_ <span style=color:#f92672>=</span> B<span style=color:#f92672>.</span>LLL()
+    c <span style=color:#f92672>=</span> B_<span style=color:#f92672>.</span>solve_left(t_)
+    c_ <span style=color:#f92672>=</span> vector(map(round, c))
+    <span style=color:#66d9ef>return</span> c_ <span style=color:#f92672>*</span> B_
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>attack</span>(s, t):
+    mat <span style=color:#f92672>=</span> [[<span style=color:#ae81ff>0</span>]<span style=color:#f92672>*</span><span style=color:#ae81ff>129</span> <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>129</span>)]
+    <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>128</span>):
+        mat[i][i] <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>
+        mat[i][<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>] <span style=color:#f92672>=</span> Integer(int(s[i]))
+    mat[<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>][<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>] <span style=color:#f92672>=</span> <span style=color:#f92672>-</span>q
+    mat <span style=color:#f92672>=</span> Matrix(ZZ, mat)
+    v <span style=color:#f92672>=</span> vector(ZZ, [<span style=color:#ae81ff>0</span>]<span style=color:#f92672>*</span><span style=color:#ae81ff>128</span> <span style=color:#f92672>+</span> [t])
+    sol <span style=color:#f92672>=</span> solve_cvp(mat, v)
+    <span style=color:#66d9ef>return</span> sol
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>check_small</span>(v):
+    <span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> v[:<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>]:
+        <span style=color:#66d9ef>if</span> i <span style=color:#f92672>&lt;</span> <span style=color:#f92672>-</span><span style=color:#ae81ff>6</span> <span style=color:#f92672>or</span> i <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>6</span>:
+            <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>False</span>
+    <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>True</span>
+
+<span style=color:#66d9ef>def</span> <span style=color:#a6e22e>generate_backdoor</span>(sk): 
+    s, e <span style=color:#f92672>=</span> sk
+    sbar <span style=color:#f92672>=</span> bar(R, <span style=color:#f92672>-</span>s, e)
+    t <span style=color:#f92672>=</span> q<span style=color:#f92672>//</span><span style=color:#ae81ff>2</span>
+    <span style=color:#66d9ef>for</span> offset <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>20</span>):
+        <span style=color:#66d9ef>for</span> dir <span style=color:#f92672>in</span> (<span style=color:#ae81ff>1</span>, <span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>):
+            v <span style=color:#f92672>=</span> attack(sbar, t <span style=color:#f92672>+</span> dir<span style=color:#f92672>*</span>offset)
+            <span style=color:#66d9ef>if</span> check_small(v):
+                <span style=color:#66d9ef>return</span> v
+    print (<span style=color:#e6db74>&#34;attack failed&#34;</span>)
+    exit()
+
+C <span style=color:#f92672>=</span> unbar(Rq, generate_backdoor(sk))
+
+print (<span style=color:#e6db74>&#34;backdoor generated:&#34;</span>, C)
+
+<span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>5</span>):
+    pt <span style=color:#f92672>=</span> randint(<span style=color:#ae81ff>0</span>, <span style=color:#ae81ff>2</span><span style=color:#f92672>^</span><span style=color:#ae81ff>11</span>)
+    challenge <span style=color:#f92672>=</span> randint(<span style=color:#ae81ff>0</span>, <span style=color:#ae81ff>11</span>)
+    re <span style=color:#f92672>=</span> list(rotation(C, challenge))
+    r <span style=color:#f92672>=</span> vector(Rq, re[<span style=color:#ae81ff>2</span>:])
+    e1 <span style=color:#f92672>=</span> vector(Rq, re[:<span style=color:#ae81ff>2</span>])
+    dif <span style=color:#f92672>=</span> decrypt(sk[<span style=color:#ae81ff>0</span>], encrypt(pk, pt, r, e1))<span style=color:#f92672>^^</span>pt
+    print (dif <span style=color:#f92672>!=</span> (<span style=color:#ae81ff>1</span> <span style=color:#f92672>&lt;&lt;</span> challenge))
+</code></pre></div>
+</div>
+</article>
+<hr>
+<div class=post-info>
+<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6A2 2 0 004 4v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+4045 Words
+</p>
+<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+2022-01-11 13:07
+</p>
+</div>
+<div class=pagination>
+<div class=pagination__title>
+<span class=pagination__title-h>Read other posts</span>
+<hr>
+</div>
+<div class=pagination__buttons>
+<span class="button previous">
+<a href=http://scar26.github.io/posts/csaw22-prng/>
+<span class=button__icon>←</span>
+<span class=button__text>CSAW22 - Attacking a Linear PRNG with LLL</span>
+</a>
+</span>
+</div>
+</div>
+</main>
+</div>
+<footer class=footer>
+</footer>
+</div>
+<script type=text/javascript src=/bundle.min.1355247b47b129d952711d7b9cb3650e7748af48a61a78f9db84cd110f41efabbb5645292a9f3178d4d57420060bd01d718847e08db7110184ed733b8ec854f1.js integrity="sha512-E1Uke0exKdlScR17nLNlDndIr0imGnj524TNEQ9B76u7VkUpKp8xeNTVdCAGC9AdcYhH4I23EQGE7XM7jshU8Q=="></script>
+</body>
+</html>
