@@ -1,7 +1,7 @@
 ---
 title: "Backdooring Kyber: NIST PQ finalist"
 date: 2022-01-11T18:37:48+05:30
-draft: true
+draft: false
 math: true
 ---
 
@@ -21,7 +21,7 @@ Elements of $R_q$ are written as polynomials in the indeterminate $u$
 
 For $x \in Z_q^n$, $||x||_2$ denotes the $l_2$ norm of $x$. For $x \in R_q$,  $||x||_2$ denotes the $l_2$ norm of $x$ considered as a vector of its coefficients
 
-Similarly $||x||_{\infty} = max(\{|x_i|\ | x_i \in x\})$ denotes the $l_{\infty}$ norm of x.
+Similarly $x_{\infty} = max(\{|x_i|\ | x_i \in x\})$ denotes the $l_{\infty}$ norm of x.
 
 $U(S)$ denotes the uniformly random distribution over the set $S$.
 $\chi(S)$ represents a small binomial distribution centered around 0 (well, technically it has to be a Poset but that's a given for the rings we're working with). The exact distribution doesn't really matter for intuition, just think of it as as a small distribution centered around 0
@@ -48,8 +48,8 @@ $$(a, a^Ts + e) \in R_q^{l \times 1} \times R_q$$
 ## Kyber
 
 As standard for PKEs, Kyber is described by the triplet of functions
-$$KeyGen()\\ 
-Enc(pk = (\textbf{t}, \rho), m)\\ 
+$$KeyGen()\newline 
+Enc(pk = (\textbf{t}, \rho), m)\newline 
 Dec(sk=\textbf{s}, ct = (u, v))$$
 
 ### Key Generation
@@ -69,7 +69,16 @@ def small_poly():
 
 def genA(base_ring, r, l):
     random.seed(r)
-    A = Matrix(base_ring, [[base_ring([Integer(random.randint(0, q-1)) for _ in range(N)]) for _ in range(l)] for _ in range(l)])
+    A = Matrix(
+        base_ring, 
+        [
+            [
+                base_ring([Integer(random.randint(0, q-1))
+                for _ in range(N)]) for _ in range(l)
+            ]
+            for _ in range(l)
+        ]
+    )
     return A
     
 def keygen():
@@ -90,8 +99,8 @@ Input: m = plaintext, pk = ($t = genA(\rho)*s + e, \rho$)
 
 $$(s', e', e'') \leftarrow \chi(R_q^{l \times 1} \times R_q^{l \times 1} \times R_q)$$
 
-$$A = genA(\rho)\\
-u = A^Ts' + e' \in R_q^{l \times 1}\\
+$$A = genA(\rho)\newline
+u = A^Ts' + e' \in R_q^{l \times 1}\newline
 v = t^Ts' + e'' + \frac{q}{2}m \in R_q$$
 
 
@@ -125,7 +134,7 @@ r and e1 are $s'$ and $e'$ that we accept as user input
 
 Except this is not the complete Kyber encryption routine. In the real Kyber, we have
 
-$$u = Compress_q(A^Ts' + e')\\
+$$u = Compress_q(A^Ts' + e')\newline
 v =  Compress_q(t^Ts' + e'' + \frac{q}{2}m)$$
 
 Kyber uses 2 special functions Compress and Decompress. Compress maps $x \in Z_q$ to an integer $y \in \{0...2^d - 1\}$ for some $d < \log_2(q)$. Decompress does the opposite (duh), but obviously there's some deterministic error introduced by the compression. i.e For $x \in Z_q$,
@@ -141,10 +150,10 @@ For decryption, we just compute $decode(round(v - s^Tu))$
 Let's open up the equation
 
 $$
-v - s^Tu\\
-= t^Ts' + e'' + \frac{q}{2}m - s^T(A^Ts' + e')\\
-= (As + e)^Ts' + e'' + \frac{q}{2}m - s^T(A^Ts' + e')\\
-= s^TA^Ts' + e^Ts' + e'' + \frac{q}{2}m - s^TA^Ts' - s^Te'\\
+v - s^Tu\newline
+= t^Ts' + e'' + \frac{q}{2}m - s^T(A^Ts' + e')\newline
+= (As + e)^Ts' + e'' + \frac{q}{2}m - s^T(A^Ts' + e')\newline
+= s^TA^Ts' + e^Ts' + e'' + \frac{q}{2}m - s^TA^Ts' - s^Te'\newline
 = \frac{q}{2}m + (e^Ts' + e'' - s^Te')
 $$
 
@@ -202,7 +211,16 @@ sk = (s, e)
 
 def genA(base_ring, r, l):
     random.seed(r)
-    A = Matrix(base_ring, [[base_ring([Integer(random.randint(0, q-1)) for _ in range(N)]) for _ in range(l)] for _ in range(l)])
+    A = Matrix(
+        base_ring, 
+        [
+            [
+                base_ring([Integer(random.randint(0, q-1))
+                for _ in range(N)]) for _ in range(l)
+            ]
+            for _ in range(l)
+        ]
+    )
     return A
 
 def decode(base_ring, v):
@@ -261,7 +279,10 @@ def flatten(u):
 
 def unflatten(base_ring, v):
     v = list(v)
-    return vector(base_ring, [base_ring(v[i*N: (i+1)*N]) for i in range(len(v)//N)])
+    return vector(
+        base_ring,
+        [base_ring(v[i*N: (i+1)*N]) for i in range(len(v)//N)]
+    )
 
 def receive_vector():
     """
@@ -325,10 +346,10 @@ s'
 \end{matrix}\right]$ $G = e''$
 Then,
 $$r = S^TC + G$$
-And a failure occurs when $||r||_{\infty} = ||S^TC + G||_{\infty} > \frac{q}{4}$ i.e 
-$$\frac{q}{4} \leq ||S^TC + G||_{\infty} \leq \frac{3q}{4}$$
+And a failure occurs when $r_{\infty} > \frac{q}{4}$ i.e 
+$$\frac{q}{4} \leq r_{\infty} \leq \frac{3q}{4}$$
 Since G is small,
-$$\frac{q}{4} \leq ||S^TC||_{\infty} \leq \frac{3q}{4}$$
+$$\frac{q}{4} \leq (S^TC)_{\infty} \leq \frac{3q}{4}$$
 Note that S is made of elements in the secret key (known), C is made of encryption randomness (which the attacker controls). So for the challenge given S, we need to find C such that coefficient of $u^i$ in $S^TC$ is in $(\frac{q}{4}, \frac{3q}{4})$
 
 The following transformation (also stolen from [here](https://eprint.iacr.org/2019/1399.pdf)) can be used to calculate these coefficients individually
@@ -349,6 +370,17 @@ def bar(base_ring, u, v):
     return vector(base_ring, b)
 ```
 
+It's also easily reversible
+
+```python
+def unbar(base_ring, v):
+    v = list(v)
+    return vector(
+    base_ring, 
+    [base_ring(v[i*N: (i+1)*N]) for i in range(len(v)//N)]
+    )
+```
+
 For $C \in R_q^{l \times 1}$,
 $$C^{(r)} = X^rC(X^{-1})\mod X^N + 1$$
 
@@ -365,6 +397,13 @@ def rotation(c, r):
     return (u^r)*evalinv(c)
 ```
 
+Note that to reverse a rotation, we just need to rotate by the same r again
+```python
+c = vector(Rq, [Rq.random_element() for _ in range(l)])
+for i in range(100):
+    assert(c == rotation(rotation(c, j), j))
+```
+
 It is easy to verify that
 
 $$S^TC = \sum_{i=0}^{N-1}\bar{S}^T\bar{C^{(i)}}.u^i$$
@@ -375,8 +414,260 @@ Now we can rewrite our problem statement as: Given $S$, to cause a decryption fa
 
 Since C is completely made of small terms (and as a result so is any rotation of C), corrupting a bit boils down to computing small solutions for a linear inequality in $Z_q$.  (What you get after the inequality is a rotation of C, to corrupt a specific bit i, just reverse rotate it by i to obtain C). This is starting to smell eerily like a lattice problem.
 
-To solve this inequality, you can extend the logic from rkm's inequality CVP repo. The inequality repo basically hypothesizes: to solve a system of linear inequations with upper and lower bounds $(u_i, l_i)$, we create a lattice using the inequations coefficients as the basis. Intuitively, if we had a solution vector, all the inequalities should "on average" be close to the mean of their respective bounds ($\frac{u_i + l_i}{2}$). So construct a target vector using these bound means and solve CVP in our coefficient lattice. Note that the inequality repo won't work directly here because it won't give a small enough solution if we just solve cvp with the mean of bounds.
+we need to find a small $c_i$, such that
+$$\frac{q}{4} \leq \sum{}s_ic_i \leq \frac{q}{4}$$
 
-So the way to extend it is that instead of 
+In other words we need to find small $c_i$ for atleast one target $t$, $\frac{q}{4} \leq t \leq \frac{q}{4}$ such that
+$$\sum{}s_ic_i = t$$
 
-There's roughly 1500 targets for the CVP between q/4 and 3q/4 but you only need to try about 500 values around q/2 to obtain solutions that fit within range (Much like rkm's repo, I don't have a mathematical proof for why this works, but it makes intuitive sense if you think about it). Once you find said small solution, you just need to send reverse rotations of it for corrupting any bit you want and get the flag
+For a given $t$, can be solved with CVP by using the following lattice basis and target vector
+$$L\ =\ \left[\begin{matrix}
+1 & 0 & .. & .. & s_0 \newline
+0 & 1 & .. & .. & s_1 \newline
+0 & 0 & 1 & .. & s_2 \newline
+.. & .. & .. & .. & .. \newline
+.. & .. & .. & .. & .. \newline
+0 & 0 & 0 & 0 & q
+\end{matrix}\right]$$
+
+$$T = \left[0\ 0\ .... t\ \right]^T$$
+
+We get a valid solution for C if $\frac{q}{4} 
+\leq CVP(L, T)[-1] \leq \frac{3q}{4}$ and all other elements (which give us C) are "small" enough to be accepted. We can't use the inequality repo directly, because you won't always find a small enough solution at a target of q/2 which is essentially what it tries to do minus lots of weighting stuff which we don't need. So to find this target, we start from q/2 and go outward from there.
+
+```python
+def attack(s, t):
+    mat = [[0]*129 for _ in range(129)]
+    for i in range(128):
+        mat[i][i] = 1
+        mat[i][-1] = Integer(int(s[i]))
+    mat[-1][-1] = -q
+    mat = Matrix(ZZ, mat)
+    v = vector(ZZ, [0]*128 + [t])
+    sol = solve_cvp(mat, v)
+    return sol
+
+def check_small(v):
+    for i in v[:-1]:
+        if i < -6 or i > 6:
+            return False
+    return True
+
+def generate_backdoor(sk): 
+    s, e = sk
+    sbar = bar(R, -s, e)
+    t = q//2
+    for offset in range(20):
+        for dir in (1, -1):
+            v = attack(sbar, t + dir*offset)
+            if check_small(v):
+                return v
+    print ("attack failed")
+    exit()
+
+C = unbar(Rq, generate_backdoor(sk))
+```
+
+There's roughly 1500 targets for the CVP between q/4 and 3q/4 but you only need to try about 100 values around q/2 to obtain solutions that fit within range. For the smaller parameters I used for the challenge, you get a hit in less than 5 tries (Much like rkm's repo, I didn't write a mathematical proof for why this works, but it makes intuitive sense if you think about it). Once you find said small solution, you just need to send reverse rotations of it for corrupting any bit you want and get the flag
+
+Flag! `flag{1f_y0u_lW3_1t_th3n_y0u_b3tt3r_put_4_R1n6_0n_i7}`
+
+Yes, I'm very proud of that pun
+
+## Complete Exploit
+```python
+import random
+
+q = 3329
+R = Zmod(q)
+N = 32
+l = 2
+d = 11
+Rx.<x> = PolynomialRing(R)
+Rq.<u> = Rx.quotient(x^N + 1)
+
+flag =  open("flag.txt").read()
+
+# My not so secret keys
+# Static keys so you can precompute part of the solution to spare our poor VPS some load
+t = vector(Rq, [3299*u^31 + 3045*u^30 + 2395*u^29 + 742*u^28 + 2092*u^27 + 22*u^26 + 2323*u^25 + 506*u^24 + 2532*u^23 + 5*u^22 + 1565*u^21 + 704*u^20 + 355*u^19 + 1766*u^18 + 1307*u^17 + 1148*u^16 + 1194*u^15 + 2260*u^14 + 1999*u^13 + 1188*u^12 + 731*u^11 + 68*u^10 + 847*u^9 + 2090*u^8 + 2514*u^7 + 3252*u^6 + 997*u^5 + 2271*u^4 + 731*u^3 + 1937*u^2 + 7*u + 2574, 2383*u^31 + 3121*u^30 + 963*u^29 + 1495*u^28 + 2776*u^27 + 2541*u^26 + 2516*u^25 + 2667*u^24 + 2772*u^23 + 114*u^22 + 1762*u^21 + 366*u^20 + 1343*u^19 + 2521*u^18 + 1678*u^17 + 3224*u^16 + 510*u^15 + 1594*u^14 + 3020*u^13 + 3145*u^12 + 1114*u^11 + 1823*u^10 + 1081*u^9 + 1737*u^8 + 2821*u^7 + 2202*u^6 + 2355*u^5 + 2238*u^4 + 745*u^3 + 266*u^2 + 887*u + 2731])
+rh = 3428567257
+s = vector(Rq, [4*u^31 + u^30 + 2*u^29 + u^28 + 4*u^27 + u^26 + 3*u^25 + 4*u^24 + 3*u^23 + u^22 + 2*u^21 + 4*u^20 + 3*u^19 + u^18 + u^17 + 3*u^16 + 2*u^15 + 2*u^14 + 4*u^13 + 4*u^12 + 2*u^11 + u^10 + u^9 + u^8 + u^7 + 2*u^6 + 4*u^5 + 2*u^4 + 3*u^3 + 4*u^2 + 3*u + 2, 4*u^31 + u^30 + 2*u^29 + 4*u^28 + u^27 + 3*u^26 + 2*u^25 + u^24 + u^23 + 3*u^22 + 4*u^21 + u^20 + u^19 + 4*u^18 + 3*u^17 + u^16 + u^15 + 3*u^14 + 3*u^13 + 3*u^12 + 3*u^11 + 3*u^10 + u^9 + 4*u^8 + 3*u^7 + 4*u^6 + 2*u^5 + 2*u^4 + u^3 + u^2 + 4*u + 4])
+e = vector(Rq, [3325*u^31 + 5*u^30 + 3325*u^29 + 3325*u^28 + 3324*u^27 + 4*u^26 + 5*u^25 + 3324*u^24 + 3324*u^23 + 3324*u^22 + 5*u^21 + 3325*u^20 + 5*u^19 + 3325*u^18 + 5*u^17 + 3325*u^16 + 3326*u^15 + 3325*u^14 + 3328*u^13 + 3327*u^12 + 3325*u^11 + 3326*u^10 + 3327*u^9 + 3328*u^8 + 3327*u^7 + 3325*u^6 + 3325*u^5 + 3327*u^4 + 3326*u^3 + 3328*u^2 + 3328*u + 3325, 3325*u^31 + 5*u^30 + 5*u^29 + 3325*u^28 + 3325*u^27 + 4*u^26 + 3324*u^25 + 3325*u^24 + 3325*u^23 + 3324*u^22 + 3325*u^21 + 4*u^20 + 4*u^19 + 3325*u^18 + 3324*u^17 + 4*u^16 + 3325*u^15 + 4*u^14 + 5*u^13 + 4*u^12 + 3324*u^11 + 5*u^10 + 5*u^9 + 3324*u^8 + 5*u^7 + 4*u^6 + 5*u^5 + 3324*u^4 + 4*u^3 + 3324*u^2 + 5*u + 3325])
+
+pk = (t, rh)
+sk = (s, e)
+
+def genA(base_ring, r, l):
+    random.seed(r)
+    A = Matrix(
+        base_ring, 
+        [
+            [
+                base_ring([Integer(random.randint(0, q-1))
+                for _ in range(N)]) for _ in range(l)
+            ]
+            for _ in range(l)
+        ]
+    )
+    return A
+
+def decode(base_ring, v):
+    v = list(v).copy()
+    for i, p in enumerate(v):
+        coefs = p.list()
+        for j, a in enumerate(coefs):
+            coefs[j] = round((2/q)*Integer(a))%2
+        v[i] = base_ring(coefs)
+    return v
+
+def small_secret():
+    return Rq([randint(1, 4) for _ in range(N)])
+
+def small_error():
+    return Rq([randint(-4, -1) for _ in range(N)])
+
+# In case you plebs think testing it locally will make it any easier
+def keygen():
+    global l
+    r = Integer(random.getrandbits(N))
+    A = genA(Rq, r, l)
+    s = vector(Rq, [small_secret() for _ in range(l)])
+    e = vector(Rq, [small_error() for _ in range(l)])
+    t = A*s + e
+
+    return (t, r), (s, e)
+
+def encrypt(pk, m, r, e1):
+    t, rh = pk
+    t = vector(Rq, t)
+    A = genA(Rq, rh, l)
+    m = list(map(int, bin(m)[2:][::-1]))
+    m = Rq(m)
+    e2 = small_error()
+    u = A.transpose()*r + e1
+    v = t*r + e2 + (q//2)*m
+    return (u, v)
+
+def decrypt(sk, ct):
+    u, v = ct
+    m = decode(Rq, [v - sk*u])[0]
+    m = m.list()[::-1]
+    return int(''.join(map(str, m)), 2)
+
+def verify_small_vector(v):
+    return all([-6 <= i <= 6 for i in v[:-1]])
+
+def flatten(u):
+    b = []
+    for i in u:
+        j = i.list()
+        j = j + [0]*(N-len(j))
+        b += j
+    return vector(R, b)
+
+def unflatten(base_ring, v):
+    v = list(v)
+    return vector(
+        base_ring,
+        [base_ring(v[i*N: (i+1)*N]) for i in range(len(v)//N)]
+    )
+
+def receive_vector():
+    """
+    What you want to input here is a vector of dimension l over Rq.
+    The way to do that is to create your vector, call the function "flatten" on it,
+    and then send the resulting list as comma separated integers
+    e.g: if your vector is v, you need to send str(flatten(v)).replace("[", "").replace("]", "")
+    """
+    a = input("Enter vector: ")
+    a = list(map(Integer, a.split(",")))
+    
+    if len(a) != N*l:
+        print ("It's just a simple math challenge, no pwn trickery please")
+        exit()
+
+    if not verify_small_vector(a):
+        print ("Is an error even an error if it's not small")
+        exit()
+    
+    return unflatten(Rq, a)
+
+# Solution/Testing
+def bar(base_ring, u, v):
+    b = []
+    for i in u:
+        j = i.list()
+        j = j + [0]*(N-len(j))
+        b += j
+    for i in v:
+        j = i.list()
+        j = j + [0]*(N-len(j))
+        b += j
+    return vector(base_ring, b)
+
+def unbar(base_ring, v):
+    v = list(v)
+    return vector(
+    base_ring, 
+    [base_ring(v[i*N: (i+1)*N]) for i in range(len(v)//N)]
+    )
+
+def evalinv(c):
+    c = list(c).copy()
+    for i, p in enumerate(c):
+        c[i] = sum([x*(u^-j) for j,x in enumerate(p.list())])
+    return vector(Rq, c)
+
+def rotation(c, r):
+    return (u^r)*evalinv(c)
+
+def solve_cvp(B, t):
+    t_ = t - B.stack(t).gram_schmidt()[0].row(-1)
+    B_ = B.LLL()
+    c = B_.solve_left(t_)
+    c_ = vector(map(round, c))
+    return c_ * B_
+
+def attack(s, t):
+    mat = [[0]*129 for _ in range(129)]
+    for i in range(128):
+        mat[i][i] = 1
+        mat[i][-1] = Integer(int(s[i]))
+    mat[-1][-1] = -q
+    mat = Matrix(ZZ, mat)
+    v = vector(ZZ, [0]*128 + [t])
+    sol = solve_cvp(mat, v)
+    return sol
+
+def check_small(v):
+    for i in v[:-1]:
+        if i < -6 or i > 6:
+            return False
+    return True
+
+def generate_backdoor(sk): 
+    s, e = sk
+    sbar = bar(R, -s, e)
+    t = q//2
+    for offset in range(20):
+        for dir in (1, -1):
+            v = attack(sbar, t + dir*offset)
+            if check_small(v):
+                return v
+    print ("attack failed")
+    exit()
+
+C = unbar(Rq, generate_backdoor(sk))
+
+print ("backdoor generated:", C)
+
+for _ in range(5):
+    pt = randint(0, 2^11)
+    challenge = randint(0, 11)
+    re = list(rotation(C, challenge))
+    r = vector(Rq, re[2:])
+    e1 = vector(Rq, re[:2])
+    dif = decrypt(sk[0], encrypt(pk, pt, r, e1))^^pt
+    print (dif != (1 << challenge))
+```
