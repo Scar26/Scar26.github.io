@@ -17,7 +17,7 @@ Speeding up polynomial operations with Finite Field FFT (or NTT, whatever you wa
 <p><strong>Each index represents one variable in the circuit</strong>. Therefore, if look at, say, the polynomial at index 0 of $A(x)$, it tells us the coefficient for the variable indexed by 0 in each constraint.</p>
 <p>A circuit with n variables and m constraints would therefore synthesize to a QAP of the form (here on referred to as the QAP equation)
 $$(w.A(x))*(w.B(x)) - w.C(x) = H(x).Z(x)$$</p>
-<p>$$w \in F^n\
+<p>$$w \in F^n\newline
 A(x), B(x), C(x), H(x), Z(x) \in  F[x]^n$$</p>
 <p>Let $X = {x_i\ |\ i \in [0, m),\ x_i \in F}$ be a set of points in $F$ chosen for interpolating constraint polynomials. $Z(x)$ is then just $\prod (x-x_i)$</p>
 <p>A polynomial $p(x)$ in &ldquo;evaluation domain&rdquo; means we have the evaluation of $p$ at $m$ values of $x$. In most cases when dealing with FFT, those points correspond to the $m^{th}$ roots of unity.</p>
@@ -47,8 +47,8 @@ Let $a_j = iFFT([y_0, y_1&hellip;y_{m-1}]) = [a_0, a_1, a_2&hellip;a_{m-1}]$</p>
 <p>$T=iFFT([\tau^0, \tau^1, \tau^2&hellip;\tau^{m-1}])$ = $[t_0, t_1, t_2&hellip;t_{m-1}]$
 We have
 $$
-a_j(\tau) = a_0.\tau^0 + a_1\tau^1&hellip;a_{m-1}\tau^{m-1},\
-y_i = a_0(\omega^i)^0 + a_1(\omega^i)^1 &hellip; a_{m-1}(\omega^i)^{m-1},\
+a_j(\tau) = a_0.\tau^0 + a_1\tau^1&hellip;a_{m-1}\tau^{m-1},\newline
+y_i = a_0(\omega^i)^0 + a_1(\omega^i)^1 &hellip; a_{m-1}(\omega^i)^{m-1},\newline
 \tau^i = t_0(\omega^i)^0 + t_1(\omega^i)^1 &hellip; t_{m-1}(\omega^i)^{m-1},
 $$</p>
 <p>Now,
@@ -57,9 +57,9 @@ $$
 $$</p>
 <p>Refactoring the equation a little bit, we get
 $$
-\sum_{i=0}^{m-1}y_i.t_i = \sum_{i=0}^{m-1}a_i(t_0(\omega^0)^i + t_1(\omega^1)^i&hellip;t_{m-1}(\omega^{m-1})^i)\
-= \sum_{i=0}^{m-1}a_i(t_0(\omega^i)^0 + t_1(\omega^i)^1&hellip;t_{m-1}(\omega^i)^{m-1})\
-= \sum_{i=0}^{m-1}a_i\tau^i = a_j(\tau)\
+\sum_{i=0}^{m-1}y_i.t_i = \sum_{i=0}^{m-1}a_i(t_0(\omega^0)^i + t_1(\omega^1)^i&hellip;t_{m-1}(\omega^{m-1})^i)\newline
+= \sum_{i=0}^{m-1}a_i(t_0(\omega^i)^0 + t_1(\omega^i)^1&hellip;t_{m-1}(\omega^i)^{m-1})\newline
+= \sum_{i=0}^{m-1}a_i\tau^i = a_j(\tau)\newline
 \implies \sum_{i=0}^{m-1}y_i.t_i = a_j(\tau)
 $$</p>
 <h2 id="proving-phase">Proving phase</h2>
@@ -80,9 +80,9 @@ $$</p>
 <p>Now let $b_i = a_iS^i$</p>
 <p>Then FFT would give us elements of the form
 $$
-\sum_{i=0}^{m-1}b_i(\omega^j)^i, j \in [0,m)\
+\sum_{i=0}^{m-1}b_i(\omega^j)^i, j \in [0,m)\newline
 = \sum_{i=0}^{m-1}a_iS^i(\omega^j)^i
-= \sum_{i=0}^{m-1}a_i(S\omega^j)^i\
+= \sum_{i=0}^{m-1}a_i(S\omega^j)^i\newline
 = p(S\omega^j), j \in [0,m)
 $$</p>
 <p>To take the inverse of a coset FFT, we just take iFFT and then divide the coefficients with the corresponding powers of $S$.</p>
