@@ -13,7 +13,7 @@ Overview There&amp;rsquo;s 2 main classes of speedups that the bellman library u
 <meta name=theme-color content>
 <link rel=canonical href=http://scar26.github.io/posts/snark-fft/>
 <title>
-FFT Optimizations for ZK SNARKs :: Informally Verified — A blog on Security and Cryptography
+FFT Optimizations in ZK SNARKs :: Informally Verified — A blog on Security and Cryptography
 </title>
 <link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.3/dist/katex.min.css integrity=sha384-Juol1FqnotbkyZUT5Z7gUPjQ9gzlwCENvUZTpQBAPxtusdwFLRy382PSDx5UUJ4/ crossorigin=anonymous>
 <script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.3/dist/katex.min.js integrity=sha384-97gW6UIJxnlKemYavrqDHSX3SiygeOwIZhwyOKRfSaf0JWKRVj9hLASHgFTzT+0O crossorigin=anonymous></script>
@@ -28,7 +28,7 @@ FFT Optimizations for ZK SNARKs :: Informally Verified — A blog on Security an
 <link rel=mask-icon href=/safari-pinned-tab.svg color>
 <link rel="shortcut icon" href=/favicon.ico>
 <meta name=msapplication-TileColor content>
-<meta itemprop=name content=" FFT Optimizations for ZK SNARKs">
+<meta itemprop=name content=" FFT Optimizations in ZK SNARKs">
 <meta itemprop=description content="This post is based on the design of the bellman library for zk-SNARKs. Though the majority of these optimizations are agnostic to the actual proving algorithm being used, I&rsquo;ll mainly focus on groth16 for now, which is what bellman implements.
 Preliminaries Basic grasp of R1CS and the groth16 proving system. Basic understanding of FFT/NTT
 Overview There&rsquo;s 2 main classes of speedups that the bellman library utilizes
@@ -38,12 +38,12 @@ Overview There&rsquo;s 2 main classes of speedups that the bellman library utili
 <meta itemprop=keywords content>
 <meta name=twitter:card content="summary_large_image">
 <meta name=twitter:image content="http://scar26.github.io/">
-<meta name=twitter:title content=" FFT Optimizations for ZK SNARKs">
+<meta name=twitter:title content=" FFT Optimizations in ZK SNARKs">
 <meta name=twitter:description content="This post is based on the design of the bellman library for zk-SNARKs. Though the majority of these optimizations are agnostic to the actual proving algorithm being used, I&rsquo;ll mainly focus on groth16 for now, which is what bellman implements.
 Preliminaries Basic grasp of R1CS and the groth16 proving system. Basic understanding of FFT/NTT
 Overview There&rsquo;s 2 main classes of speedups that the bellman library utilizes
  Speeding up polynomial operations with Finite Field FFT (or NTT, whatever you wanna call it) Parallelizing vector and elliptic curve operations  In this part, we&rsquo;ll discuss only the FFT based optimizations">
-<meta property="og:title" content=" FFT Optimizations for ZK SNARKs">
+<meta property="og:title" content=" FFT Optimizations in ZK SNARKs">
 <meta property="og:description" content="This post is based on the design of the bellman library for zk-SNARKs. Though the majority of these optimizations are agnostic to the actual proving algorithm being used, I&rsquo;ll mainly focus on groth16 for now, which is what bellman implements.
 Preliminaries Basic grasp of R1CS and the groth16 proving system. Basic understanding of FFT/NTT
 Overview There&rsquo;s 2 main classes of speedups that the bellman library utilizes
@@ -85,7 +85,7 @@ Overview There&rsquo;s 2 main classes of speedups that the bellman library utili
 </div>
 <article>
 <h1 class=post-title>
-<a href=http://scar26.github.io/posts/snark-fft/>FFT Optimizations for ZK SNARKs</a>
+<a href=http://scar26.github.io/posts/snark-fft/>FFT Optimizations in ZK SNARKs</a>
 </h1>
 <div class=post-content>
 <p>This post is based on the design of the <a href=https://github.com/zkcrypto/bellman>bellman</a> library for zk-SNARKs. Though the majority of these optimizations are agnostic to the actual proving algorithm being used, I&rsquo;ll mainly focus on groth16 for now, which is what bellman implements.</p>
