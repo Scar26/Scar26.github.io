@@ -2,6 +2,7 @@
 title: " FFT Optimizations for ZK SNARKs"
 date: 2023-02-10T15:15:04+05:30
 draft: false
+math: true
 ---
 
 This post is based on the design of the [bellman](https://github.com/zkcrypto/bellman) library for zk-SNARKs. Though the majority of these optimizations are agnostic to the actual proving algorithm being used, I'll mainly focus on groth16 for now, which is what bellman implements.
