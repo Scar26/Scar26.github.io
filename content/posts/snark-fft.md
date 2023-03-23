@@ -1,5 +1,5 @@
 ---
-title: " FFT Optimizations for ZK SNARKs"
+title: " FFT Optimizations in ZK SNARKs"
 date: 2023-02-10T15:15:04+05:30
 draft: false
 math: true
@@ -30,7 +30,7 @@ One constraint in the circuit is represented by 3 vectors $A,B,C \in F^n$. To sy
 A circuit with n variables and m constraints would therefore synthesize to a QAP of the form (here on referred to as the QAP equation)
 $$(w.A(x))*(w.B(x)) - w.C(x) = H(x).Z(x)$$
 
-$$w \in F^n\\
+$$w \in F^n\newline
 A(x), B(x), C(x), H(x), Z(x) \in  F[x]^n$$
 
 Let $X = \{x_i\ |\ i \in [0, m),\ x_i \in F\}$ be a set of points in $F$ chosen for interpolating constraint polynomials. $Z(x)$ is then just $\prod (x-x_i)$ 
@@ -73,8 +73,8 @@ Let $a_j = iFFT([y_0, y_1...y_{m-1}]) = [a_0, a_1, a_2...a_{m-1}]$
 $T=iFFT([\tau^0, \tau^1, \tau^2...\tau^{m-1}])$ = $[t_0, t_1, t_2...t_{m-1}]$
 We have
 $$
-a_j(\tau) = a_0.\tau^0 + a_1\tau^1...a_{m-1}\tau^{m-1},\\
-y_i = a_0(\omega^i)^0 + a_1(\omega^i)^1 ... a_{m-1}(\omega^i)^{m-1},\\
+a_j(\tau) = a_0.\tau^0 + a_1\tau^1...a_{m-1}\tau^{m-1},\newline
+y_i = a_0(\omega^i)^0 + a_1(\omega^i)^1 ... a_{m-1}(\omega^i)^{m-1},\newline
 \tau^i = t_0(\omega^i)^0 + t_1(\omega^i)^1 ... t_{m-1}(\omega^i)^{m-1},
 $$
 
@@ -85,9 +85,9 @@ $$
 
 Refactoring the equation a little bit, we get
 $$
-\sum_{i=0}^{m-1}y_i.t_i = \sum_{i=0}^{m-1}a_i(t_0(\omega^0)^i + t_1(\omega^1)^i...t_{m-1}(\omega^{m-1})^i)\\
-= \sum_{i=0}^{m-1}a_i(t_0(\omega^i)^0 + t_1(\omega^i)^1...t_{m-1}(\omega^i)^{m-1})\\
-= \sum_{i=0}^{m-1}a_i\tau^i = a_j(\tau)\\
+\sum_{i=0}^{m-1}y_i.t_i = \sum_{i=0}^{m-1}a_i(t_0(\omega^0)^i + t_1(\omega^1)^i...t_{m-1}(\omega^{m-1})^i)\newline
+= \sum_{i=0}^{m-1}a_i(t_0(\omega^i)^0 + t_1(\omega^i)^1...t_{m-1}(\omega^i)^{m-1})\newline
+= \sum_{i=0}^{m-1}a_i\tau^i = a_j(\tau)\newline
 \implies \sum_{i=0}^{m-1}y_i.t_i = a_j(\tau)
 $$
 
@@ -120,9 +120,9 @@ Now let $b_i = a_iS^i$
 
 Then FFT would give us elements of the form
 $$
-\sum_{i=0}^{m-1}b_i(\omega^j)^i, j \in [0,m)\\
+\sum_{i=0}^{m-1}b_i(\omega^j)^i, j \in [0,m)\newline
 = \sum_{i=0}^{m-1}a_iS^i(\omega^j)^i
-= \sum_{i=0}^{m-1}a_i(S\omega^j)^i\\
+= \sum_{i=0}^{m-1}a_i(S\omega^j)^i\newline
 = p(S\omega^j), j \in [0,m)
 $$
 
