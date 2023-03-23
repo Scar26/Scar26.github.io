@@ -1,0 +1,238 @@
+<!doctype html><html lang=en>
+<head>
+<meta charset=utf-8>
+<meta http-equiv=x-ua-compatible content="ie=edge">
+<meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no">
+<meta name=author content>
+<meta name=description content="This post is based on the design of the bellman library for zk-SNARKs. Though the majority of these optimizations are agnostic to the actual proving algorithm being used, I&amp;rsquo;ll mainly focus on groth16 for now, which is what bellman implements.
+Preliminaries Basic grasp of R1CS and the groth16 proving system. Basic understanding of FFT/NTT
+Overview There&amp;rsquo;s 2 main classes of speedups that the bellman library utilizes
+ Speeding up polynomial operations with Finite Field FFT (or NTT, whatever you wanna call it) Parallelizing vector and elliptic curve operations  In this part, we&amp;rsquo;ll discuss only the FFT based optimizations">
+<meta name=keywords content>
+<meta name=robots content="noodp">
+<meta name=theme-color content>
+<link rel=canonical href=http://scar26.github.io/posts/snark-fft/>
+<title>
+FFT Optimizations for ZK SNARKs :: Informally Verified — A blog on Security and Cryptography
+</title>
+<link href=https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.5.0/css/flag-icon.min.css rel=stylesheet type=text/css>
+<link rel=stylesheet href=/main.24c3d542794dfaa0d05ac4c5a197a9d0491c729bb66345507ae7d672634eb067.css>
+<link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png>
+<link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png>
+<link rel=manifest href=/site.webmanifest>
+<link rel=mask-icon href=/safari-pinned-tab.svg color>
+<link rel="shortcut icon" href=/favicon.ico>
+<meta name=msapplication-TileColor content>
+<meta itemprop=name content=" FFT Optimizations for ZK SNARKs">
+<meta itemprop=description content="This post is based on the design of the bellman library for zk-SNARKs. Though the majority of these optimizations are agnostic to the actual proving algorithm being used, I&rsquo;ll mainly focus on groth16 for now, which is what bellman implements.
+Preliminaries Basic grasp of R1CS and the groth16 proving system. Basic understanding of FFT/NTT
+Overview There&rsquo;s 2 main classes of speedups that the bellman library utilizes
+ Speeding up polynomial operations with Finite Field FFT (or NTT, whatever you wanna call it) Parallelizing vector and elliptic curve operations  In this part, we&rsquo;ll discuss only the FFT based optimizations"><meta itemprop=datePublished content="2023-02-10T15:15:04+05:30">
+<meta itemprop=dateModified content="2023-02-10T15:15:04+05:30">
+<meta itemprop=wordCount content="1187"><meta itemprop=image content="http://scar26.github.io/">
+<meta itemprop=keywords content>
+<meta name=twitter:card content="summary_large_image">
+<meta name=twitter:image content="http://scar26.github.io/">
+<meta name=twitter:title content=" FFT Optimizations for ZK SNARKs">
+<meta name=twitter:description content="This post is based on the design of the bellman library for zk-SNARKs. Though the majority of these optimizations are agnostic to the actual proving algorithm being used, I&rsquo;ll mainly focus on groth16 for now, which is what bellman implements.
+Preliminaries Basic grasp of R1CS and the groth16 proving system. Basic understanding of FFT/NTT
+Overview There&rsquo;s 2 main classes of speedups that the bellman library utilizes
+ Speeding up polynomial operations with Finite Field FFT (or NTT, whatever you wanna call it) Parallelizing vector and elliptic curve operations  In this part, we&rsquo;ll discuss only the FFT based optimizations">
+<meta property="og:title" content=" FFT Optimizations for ZK SNARKs">
+<meta property="og:description" content="This post is based on the design of the bellman library for zk-SNARKs. Though the majority of these optimizations are agnostic to the actual proving algorithm being used, I&rsquo;ll mainly focus on groth16 for now, which is what bellman implements.
+Preliminaries Basic grasp of R1CS and the groth16 proving system. Basic understanding of FFT/NTT
+Overview There&rsquo;s 2 main classes of speedups that the bellman library utilizes
+ Speeding up polynomial operations with Finite Field FFT (or NTT, whatever you wanna call it) Parallelizing vector and elliptic curve operations  In this part, we&rsquo;ll discuss only the FFT based optimizations">
+<meta property="og:type" content="article">
+<meta property="og:url" content="http://scar26.github.io/posts/snark-fft/"><meta property="og:image" content="http://scar26.github.io/"><meta property="article:section" content="posts">
+<meta property="article:published_time" content="2023-02-10T15:15:04+05:30">
+<meta property="article:modified_time" content="2023-02-10T15:15:04+05:30"><meta property="og:site_name" content="Informally Verified">
+<meta property="article:published_time" content="2023-02-10 15:15:04 +0530 +0530">
+</head>
+<body>
+<div class=container>
+<header class=header>
+<span class=header__inner>
+<a href=/ style=text-decoration:none>
+<div class=logo>
+<span class=logo__mark>></span>
+<span class=logo__text>Informally Verified</span>
+<span class=logo__cursor>
+</span>
+</div>
+</a>
+<span class=header__right>
+<nav class=menu>
+<ul class=menu__inner><li><a href=/posts>Blog</a></li>
+</ul>
+</nav>
+<span class=menu-trigger><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+</span>
+</span>
+</span>
+</header>
+<div class=content>
+<main class=post>
+<div class=post-info>
+<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-clock"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+6 minutes
+</p>
+</div>
+<article>
+<h1 class=post-title>
+<a href=http://scar26.github.io/posts/snark-fft/>FFT Optimizations for ZK SNARKs</a>
+</h1>
+<div class=post-content>
+<p>This post is based on the design of the <a href=https://github.com/zkcrypto/bellman>bellman</a> library for zk-SNARKs. Though the majority of these optimizations are agnostic to the actual proving algorithm being used, I&rsquo;ll mainly focus on groth16 for now, which is what bellman implements.</p>
+<h2 id=preliminaries>Preliminaries</h2>
+<p>Basic grasp of R1CS and the <a href=https://xn--2-umb.com/22/groth16/>groth16</a> proving system. Basic understanding of FFT/NTT</p>
+<h2 id=overview>Overview</h2>
+<p>There&rsquo;s 2 main classes of speedups that the bellman library utilizes</p>
+<ul>
+<li>Speeding up polynomial operations with Finite Field FFT (or NTT, whatever you wanna call it)</li>
+<li>Parallelizing vector and elliptic curve operations</li>
+</ul>
+<p>In this part, we&rsquo;ll discuss only the FFT based optimizations</p>
+<h2 id=notation>Notation</h2>
+<p>Throughout, we&rsquo;ll assume a constraint system over a finite field $F$.</p>
+<p>One constraint in the circuit is represented by 3 vectors $A,B,C \in F^n$. To synthesize a QAP from this constraint system, we interpolate $A, B, C$ on an index by index basis to obtain $A(x), B(x), C(x) \in F[x]^n$.</p>
+<p><strong>Each index represents one variable in the circuit</strong>. Therefore, if look at, say, the polynomial at index 0 of $A(x)$, it tells us the coefficient for the variable indexed by 0 in each constraint.</p>
+<p>A circuit with n variables and m constraints would therefore synthesize to a QAP of the form (here on referred to as the QAP equation)
+$$(w.A(x))*(w.B(x)) - w.C(x) = H(x).Z(x)$$</p>
+<p>$$w \in F^n\
+A(x), B(x), C(x), H(x), Z(x) \in F[x]^n$$</p>
+<p>Let $X = {x_i\ |\ i \in [0, m),\ x_i \in F}$ be a set of points in $F$ chosen for interpolating constraint polynomials. $Z(x)$ is then just $\prod (x-x_i)$</p>
+<p>A polynomial $p(x)$ in &ldquo;evaluation domain&rdquo; means we have the evaluation of $p$ at $m$ values of $x$. In most cases when dealing with FFT, those points correspond to the $m^{th}$ roots of unity.</p>
+<p>A polynomial $p(x)$ in &ldquo;lagrange basis&rdquo; simply means we&rsquo;re given the vector of its coefficients.</p>
+<p>We use FFT to go from lagrange basis to evaluation domain, and iFFT for the inverse in $O(m\log(m ))$ time (as opposed to $O(m^2)$ in the naive approach).</p>
+<h2 id=parameter-generation-phase>Parameter generation phase</h2>
+<p>SNARKs require a trusted setup. Groth16 in particular is a non-universal proof system, meaning that a separate parameter generation ceremony is required for each circuit.</p>
+<p>The polynomial vectors $A(x), B(x), C(x)$ specify the circuit and are therefore public. But in the proving phase, we have to compute $w.T(\tau)$ for $T \in {A, B, C}$. Note that $\tau$ is destroyed after the SRS generation and what we actually have as part of the trusted setup is $G_1A(\tau), G_1B(\tau), G_1C(\tau)$</p>
+<p>So it makes sense to store $G_1A(\tau), G_1B(\tau), G_1C(\tau)$ as part of the proving key instead of the entire polynomial vector. This is useful because:</p>
+<ol>
+<li>It leads to smaller parameters since we only have to store vectors of field elements instead of polynomials</li>
+<li>Since $\tau$ is part of the trusted setup (constant), $G_1A(\tau), G_1B(\tau), G_1C(\tau)$ can be precomputed for the proving phase</li>
+</ol>
+<p>Since we&rsquo;re still int the parameter generation phase, $\tau$ is known. So our task is to compute $A(\tau), B(\tau), C(\tau)$.</p>
+<h3 id=evaluation-without-interpolation>Evaluation without interpolation</h3>
+<p>Lets address an individual index of $A(x)$. We have $y_i \in F, i \in [0, m)$. And we interpolate these to obtain a polynomial $a_j(x)$ s.t $a_j(x_i) = y_i, x_i \in X$. $a_j$ represents all constraints on the circuit variable indexed j. Since we choose $X$ to be the roots of unity in $F$, interpolation can be done with inverse FFT. Since what we want to calculate is $a(\tau)$, the naive approach would be</p>
+<ol>
+<li>Gather all $y_i$ and do iFFT to obtain $a(x)$</li>
+<li>Evaluate at $\tau$</li>
+<li>Repeat for all indices</li>
+</ol>
+<p>This requires one iFFT operation for each variable in the circuit. Instead we can use a trick to calculate $a_j(\tau)$ without ever interpolating $y_i$.</p>
+<p>Calculate $T=iFFT([\tau^0, \tau^1, \tau^2&mldr;\tau^{m-1}])$ = $[t_0, t_1, t_2&mldr;t_{m-1}]$</p>
+<p>Then, given $y_i$, $a_j(\tau)$ is simply given by $\sum_{i=0}^{m-1}y_i.t_i$. This lets us compute $A(x)$ with one iFFT (for computing $T$) instead of one for each variable.</p>
+<p><strong>Proof:</strong>
+Let $a_j = iFFT([y_0, y_1&mldr;y_{m-1}]) = [a_0, a_1, a_2&mldr;a_{m-1}]$</p>
+<p>$T=iFFT([\tau^0, \tau^1, \tau^2&mldr;\tau^{m-1}])$ = $[t_0, t_1, t_2&mldr;t_{m-1}]$
+We have
+$$
+a_j(\tau) = a_0.\tau^0 + a_1\tau^1&mldr;a_{m-1}\tau^{m-1},\
+y_i = a_0(\omega^i)^0 + a_1(\omega^i)^1 &mldr; a_{m-1}(\omega^i)^{m-1},\
+\tau^i = t_0(\omega^i)^0 + t_1(\omega^i)^1 &mldr; t_{m-1}(\omega^i)^{m-1},
+$$</p>
+<p>Now,
+$$
+\sum_{i=0}^{m-1}y_i.t_i = \sum_{i=0}^{m-1}(a_0(\omega^i)^0 + a_1(\omega^i)^1 &mldr; a_{m-1}(\omega^i)^{m-1}).t_i
+$$</p>
+<p>Refactoring the equation a little bit, we get
+$$
+\sum_{i=0}^{m-1}y_i.t_i = \sum_{i=0}^{m-1}a_i(t_0(\omega^0)^i + t_1(\omega^1)^i&mldr;t_{m-1}(\omega^{m-1})^i)\
+= \sum_{i=0}^{m-1}a_i(t_0(\omega^i)^0 + t_1(\omega^i)^1&mldr;t_{m-1}(\omega^i)^{m-1})\
+= \sum_{i=0}^{m-1}a_i\tau^i = a_j(\tau)\
+\implies \sum_{i=0}^{m-1}y_i.t_i = a_j(\tau)
+$$</p>
+<h2 id=proving-phase>Proving phase</h2>
+<p>At its core, what a zk SNARK system aims to prove is knowledge of a witness vector $w$ for the above described QAP equation $(w.A(x))*(w.B(x)) - w.C(x) = H(x).Z(x)$</p>
+<p>For this we need to compute $H(x)$ which we can get by dividing $(w.A(x))*(w.B(x)) - w.C(x)$ by $Z(x)$. That&rsquo;s 2 polynomial multiplications and one division, pretty standard usecase for FFT&mldr; with one caveat. $Z(x)$ is chosen so as to be 0 over the set $X$ which is our FFT basis. So how do we divide by Z when it&rsquo;s just 0 on all the points in our evaluation domain?</p>
+<h3 id=coset-fft>Coset FFT</h3>
+<p>We use coset-FFT for division with polynomials that evaluate to zero at one or more of the roots of unity. Which is to say, instead of getting evaluations at $\omega^i$, we get evaluations at $S\omega^i$ where $S \in F$ is a fixed element.</p>
+<p>Note: $S$ is typically chosen to be the multiplicative generator of the field, but any high order element would work in theory.</p>
+<p>The algorithm is pretty simple. Given a polynomial $p$ in lagrange basis,</p>
+<p>$$
+p = [a_0, a_1&mldr;a_{m-1}]
+$$</p>
+<p>The coset FFT is simply</p>
+<p>$$
+FFT([a_0, a_1S, a_2S^2&mldr;a_{m-1}S^{m-1}])
+$$</p>
+<p>The explanation is also pretty simple. FFT gives us evaluations of $p$ at roots of unity, i.e $\sum_{i=0}^{m-1}a_i\omega^i$</p>
+<p>Now let $b_i = a_iS^i$</p>
+<p>Then FFT would give us elements of the form
+$$
+\sum_{i=0}^{m-1}b_i(\omega^j)^i, j \in [0,m)\
+= \sum_{i=0}^{m-1}a_iS^i(\omega^j)^i
+= \sum_{i=0}^{m-1}a_i(S\omega^j)^i\
+= p(S\omega^j), j \in [0,m)
+$$</p>
+<p>To take the inverse of a coset FFT, we just take iFFT and then divide the coefficients with the corresponding powers of $S$.</p>
+<p>Additionally:
+Now $Z(x)=\prod (x-\omega^i) = x^m - 1$.</p>
+<p>Since $(\omega^i)^m = 1 \forall i \in [0,m)$, we don&rsquo;t even need to compute FFT to get the evaluation of $Z(S\omega^i)$ at the roots of unity, since it will have the same value $S^m - 1$ at all the evaluation points.</p>
+<p>Now to compute H(x), we first obtain $CosetFFT(w.A(x)*w.B(x) - w.C(x))$</p>
+<ol>
+<li>The multiplication of A and B is also performed by taking FFT normally followed by iFFT to convert the result back to lagrange basis</li>
+<li>We now have the evaluation of $w.A(x)*w.B(x) - w.C(x)$ at the points $S.(\omega^i)$</li>
+<li>Divide each of these by $S^m - 1$ (evaluation of Z at all these points)</li>
+<li>Take inverse coset FFT as described above</li>
+</ol>
+<p>We now have H(x) in the lagrange basis</p>
+<h2 id=implementations>Implementations</h2>
+<p>Here&rsquo;s a sample implementation of coset FFT from my <a href=https://github.com/Scar26/embedded-groth/blob/master/src/poly.rs>groth16 library</a></p>
+<pre tabindex=0><code class=language-rust! data-lang=rust!>pub fn coset_fft&lt;S: PrimeField&gt;(a: &amp;mut [S], omega: &amp;S, exp: u32) {
+    let g = S::multiplicative_generator();
+    let mut u = S::one();
+    for x in a.iter_mut() {
+        x.mul_assign(&amp;u);
+        u.mul_assign(&amp;g);
+    }
+    fft(a, omega, exp)
+}
+
+pub fn icoset_fft&lt;S: PrimeField&gt;(a: &amp;mut [S], omega: &amp;S, exp: u32) {
+    ifft(a, omega, exp);
+    let g = S::multiplicative_generator().invert().unwrap();
+    let mut u = S::one();
+    for x in a.iter_mut() {
+        x.mul_assign(&amp;u);
+        u.mul_assign(&amp;g);
+    }
+}
+
+</code></pre>
+</div>
+</article>
+<hr>
+<div class=post-info>
+<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file-text"><path d="M14 2H6A2 2 0 004 4v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+1187 Words
+</p>
+<p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+2023-02-10 09:45
+</p>
+</div>
+<div class=pagination>
+<div class=pagination__title>
+<span class=pagination__title-h>Read other posts</span>
+<hr>
+</div>
+<div class=pagination__buttons>
+<span class="button next">
+<a href=http://scar26.github.io/posts/csaw22-prng/>
+<span class=button__text>CSAW22 - Attacking a Linear PRNG with LLL</span>
+<span class=button__icon>→</span>
+</a>
+</span>
+</div>
+</div>
+</main>
+</div>
+<footer class=footer>
+</footer>
+</div>
+<script type=text/javascript src=/bundle.min.1355247b47b129d952711d7b9cb3650e7748af48a61a78f9db84cd110f41efabbb5645292a9f3178d4d57420060bd01d718847e08db7110184ed733b8ec854f1.js integrity="sha512-E1Uke0exKdlScR17nLNlDndIr0imGnj524TNEQ9B76u7VkUpKp8xeNTVdCAGC9AdcYhH4I23EQGE7XM7jshU8Q=="></script>
+</body>
+</html>
