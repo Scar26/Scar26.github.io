@@ -1,5 +1,5 @@
 ---
-title: " FFT Optimizations in ZK SNARKs"
+title: "FFT Optimizations in ZK SNARKs"
 date: 2023-02-10T15:15:04+05:30
 draft: false
 math: true
